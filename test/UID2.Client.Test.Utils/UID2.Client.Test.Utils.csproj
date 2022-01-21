@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>UID2.Client.Test.Utils</RootNamespace>
+    <IsPackable>true</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\UID2.Client\UID2.Client.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -47,9 +47,9 @@ namespace UID2.Client
             return new DecryptionResponse(DecryptionStatus.Success, uid, established, siteId);
         }
 
-        public static DecryptionResponse MakeError(DecryptionStatus status)
+        public static DecryptionResponse MakeError(DecryptionStatus status, int? siteId = null)
         {
-            return new DecryptionResponse(status, null, null, null);
+            return new DecryptionResponse(status, null, null, siteId);
         }
 
         public bool Success => _status == DecryptionStatus.Success;

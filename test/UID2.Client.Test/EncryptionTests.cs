@@ -117,6 +117,7 @@ namespace UID2.Client.Test
 
             var res = client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);
+            Assert.Equal(SITE_ID, res.SiteId);
 
             res = client.Decrypt(advertisingToken, expiry.AddSeconds(-1));
             Assert.Equal(EXAMPLE_UID, res.Uid);

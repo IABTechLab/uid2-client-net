@@ -54,12 +54,6 @@ namespace UID2.Client
             var masterPayloadReader = new BigEndianByteReader(new MemoryStream(masterDecrypted));
 
             long expiresMilliseconds = masterPayloadReader.ReadInt64();
-            var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
-            if (expiry < now)
-            {
-                return DecryptionResponse.MakeError(DecryptionStatus.ExpiredToken);
-            }
-
             var siteKeyId = masterPayloadReader.ReadInt32();
 
             Key siteKey = null;
@@ -75,6 +69,13 @@ namespace UID2.Client
             var identityPayloadReader = new BigEndianByteReader(new MemoryStream(identityDecrypted));
 
             var siteId = identityPayloadReader.ReadInt32();
+
+            var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
+            if (expiry < now)
+            {
+                return DecryptionResponse.MakeError(DecryptionStatus.ExpiredToken, siteId);
+            }
+
             var idLength = identityPayloadReader.ReadInt32();
 
             var idString = Encoding.UTF8.GetString(identityPayloadReader.ReadBytes(idLength));

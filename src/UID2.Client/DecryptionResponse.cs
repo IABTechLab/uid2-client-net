@@ -34,17 +34,12 @@ namespace UID2.Client
         private readonly DateTime? _established;
         private readonly int? _siteId;
 
-        private DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId)
+        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId)
         {
             _status = status;
             _uid = uid;
             _established = established;
             _siteId = siteId;
-        }
-
-        public static DecryptionResponse MakeSuccess(string uid, DateTime established, int siteId)
-        {
-            return new DecryptionResponse(DecryptionStatus.Success, uid, established, siteId);
         }
 
         public static DecryptionResponse MakeError(DecryptionStatus status)

@@ -36,8 +36,15 @@ namespace UID2.Client
         /// </summary>
         internal static KeyContainer Parse(string json)
         {
-            var response = JObject.Parse(json);
-            var body = response.Value<JArray>("body");
+            return Parse(JObject.Parse(json));
+        }
+
+        /// <summary>
+        /// Parse json data and load keys
+        /// </summary>
+        internal static KeyContainer Parse(JObject json)
+        {
+            var body = json.Value<JArray>("body");
 
             var keys = body.Select(i => (JObject)i).Select(item => new Key(
                     item.Value<long>("id"),

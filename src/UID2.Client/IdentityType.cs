@@ -23,9 +23,8 @@
 
 namespace UID2.Client
 {
-    internal enum PayloadType
+    internal enum IdentityType
     {
-        ENCRYPTED_DATA = 128,
-        ENCRYPTED_DATA_V3 = 96,
+        Email = 0,
     }
 }

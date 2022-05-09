@@ -21,6 +21,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Net;
@@ -28,27 +29,30 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using UID2.Client.Utils;
 
 namespace UID2.Client
 {
     internal class UID2Client : IUID2Client
     {
-        public static readonly HttpMethod RefreshHttpMethod = HttpMethod.Get;
+        public static readonly HttpMethod RefreshHttpMethod = HttpMethod.Post;
 
         private readonly string _endpoint;
         private readonly string _authKey;
+        private readonly byte[] _secretKey;
+        private readonly IdentityScope _identityScope;
 
         private readonly HttpClient _client;
 
         private KeyContainer _container;
 
 
-        public UID2Client(string endpoint, string authKey)
+        public UID2Client(string endpoint, string authKey, string secretKey, IdentityScope identityScope)
         {
             _client = new HttpClient();
             _endpoint = endpoint;
             _authKey = authKey;
+            _secretKey = Convert.FromBase64String(secretKey);
+            _identityScope = identityScope;
         }
         
         public DecryptionResponse Decrypt(string token, DateTime now)
@@ -66,7 +70,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(Convert.FromBase64String(token), container, now);
+                return UID2Encryption.Decrypt(Convert.FromBase64String(token), container, now, _identityScope);
             }
             catch (Exception)
             {
@@ -76,7 +80,7 @@ namespace UID2.Client
 
         public EncryptionDataResponse EncryptData(EncryptionDataRequest request)
         {
-            return UID2Encryption.EncryptData(request, Volatile.Read(ref _container));
+            return UID2Encryption.EncryptData(request, Volatile.Read(ref _container), _identityScope);
         }
 
         public DecryptionDataResponse DecryptData(String encryptedData)
@@ -94,7 +98,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.DecryptData(Convert.FromBase64String(encryptedData), container);
+                return UID2Encryption.DecryptData(Convert.FromBase64String(encryptedData), container, _identityScope);
             }
             catch (Exception)
             {
@@ -127,11 +131,14 @@ namespace UID2.Client
 
         private async Task<RefreshResponse> RefreshInternal(CancellationToken token)
         {
-            var request = new HttpRequestMessage(RefreshHttpMethod, _endpoint + "/v1/key/latest");
+            var request = new HttpRequestMessage(RefreshHttpMethod, _endpoint + "/v2/key/latest");
             request.Headers.Add("Authorization", $"Bearer {_authKey}");
             HttpStatusCode? statusCode = null;
             try
             {
+                var (body, nonce) = V2Helper.MakeEnvelope(_secretKey, DateTime.UtcNow);
+                request.Content = new StringContent(body, Encoding.ASCII);
+
                 using (var response = await _client.SendAsync(request, token).ConfigureAwait(false))
                 {
                     statusCode = response.StatusCode;
@@ -139,7 +146,8 @@ namespace UID2.Client
                     var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
                     using (var reader = new StreamReader(responseStream))
                     {
-                        var json = await reader.ReadToEndAsync().ConfigureAwait(false);
+                        var responseBody = await reader.ReadToEndAsync().ConfigureAwait(false);
+                        var json = V2Helper.ParseResponse(responseBody, _secretKey, nonce);
                         Volatile.Write(ref _container, KeyParser.Parse(json));
                     }
                     return RefreshResponse.MakeSuccess();

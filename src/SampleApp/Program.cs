@@ -32,6 +32,7 @@ namespace app
     {
         static string _baseUrl;
         static string _authKey;
+        static string _secretKey;
         static string _advertisingToken;
 
         static void StartExample(string name)
@@ -46,7 +47,7 @@ namespace app
         {
             StartExample("Basic keys refresh and decrypt token");
 
-            var client = UID2ClientFactory.Create(_baseUrl, _authKey);
+            var client = UID2ClientFactory.Create(_baseUrl, _authKey, _secretKey);
             var refreshResult = client.Refresh();
             if (!refreshResult.Success)
             {
@@ -58,13 +59,14 @@ namespace app
             Console.WriteLine($"DecryptedSuccess={result.Success} Status={result.Status}");
             Console.WriteLine($"UID={result.Uid}");
             Console.WriteLine($"EstablishedAt={result.Established}");
+            Console.WriteLine($"SiteId={result.SiteId}");
         }
 
         static void ExampleAutoRefresh()
         {
             StartExample("Automatic background keys refresh");
 
-            var client = UID2ClientFactory.Create(_baseUrl, _authKey);
+            var client = UID2ClientFactory.Create(_baseUrl, _authKey, _secretKey);
 
             var refreshThread = new Thread(() =>
             {
@@ -93,7 +95,7 @@ namespace app
         {
             StartExample("Encrypt and Decrypt Data");
 
-            var client = UID2ClientFactory.Create(_baseUrl, _authKey);
+            var client = UID2ClientFactory.Create(_baseUrl, _authKey, _secretKey);
             var refreshResult = client.Refresh();
             if (!refreshResult.Success)
             {
@@ -124,15 +126,16 @@ namespace app
 
         static int Main(string[] args)
         {
-            if (args.Length < 3)
+            if (args.Length < 4)
             {
-                Console.Error.WriteLine("Usage: test-client <base-url> <auth-key> <ad-token>");
+                Console.Error.WriteLine("Usage: test-client <base-url> <auth-key> <secret-key> <ad-token>");
                 return 1;
             }
 
             _baseUrl = args[0];
             _authKey = args[1];
-            _advertisingToken = args[2];
+            _secretKey = args[2];
+            _advertisingToken = args[3];
 
             ExampleBasicRefresh();
             ExampleAutoRefresh();

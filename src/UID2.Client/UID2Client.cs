@@ -21,7 +21,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
 using System.Net;
@@ -147,8 +146,8 @@ namespace UID2.Client
                     using (var reader = new StreamReader(responseStream))
                     {
                         var responseBody = await reader.ReadToEndAsync().ConfigureAwait(false);
-                        var json = V2Helper.ParseResponse(responseBody, _secretKey, nonce);
-                        Volatile.Write(ref _container, KeyParser.Parse(json));
+                        var responseBytes = V2Helper.ParseResponse(responseBody, _secretKey, nonce);
+                        Volatile.Write(ref _container, KeyParser.Parse(Encoding.UTF8.GetString(responseBytes)));
                     }
                     return RefreshResponse.MakeSuccess();
                 }

@@ -39,13 +39,13 @@ namespace UID2.Client
 
         internal static DecryptionResponse Decrypt(byte[] encryptedId, IKeyContainer keys, DateTime now, IdentityScope identityScope)
         {
-            if (encryptedId[1] == 112 && encryptedId[0] != 2)
-            {
-                return DecryptV3(encryptedId, keys, now, identityScope);
-            }
-            else if (encryptedId[0] == 2)
+            if (encryptedId[0] == 2)
             {
                 return DecryptV2(encryptedId, keys, now);
+            }
+            else if (encryptedId[1] == 112)
+            {
+                return DecryptV3(encryptedId, keys, now, identityScope);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);

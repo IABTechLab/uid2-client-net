@@ -21,10 +21,9 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-using Newtonsoft.Json.Linq;
 using System;
 using System.IO;
-using System.Text;
+using System.Linq;
 using UID2.Client.Utils;
 
 namespace UID2.Client
@@ -54,18 +53,19 @@ namespace UID2.Client
             return (encodedEnvelope, nonce);
         }
 
-        internal static JObject ParseResponse(string envelope, byte[] secret, byte[] nonce)
+        internal static byte[] ParseResponse(string envelope, byte[] secret, byte[] nonce)
         {
             var envelopeBytes = Convert.FromBase64String(envelope);
             var payload = UID2Encryption.DecryptGCM(new ByteArraySlice(envelopeBytes, 0, envelopeBytes.Length), secret);
-            var response = JObject.Parse(Encoding.UTF8.GetString(payload));
-            var nonceString = Convert.ToBase64String(nonce);
-            if (response.Value<string>("nonce") != nonceString)
+            var payloadReader = new BigEndianByteReader(new MemoryStream(payload));
+            var respondedMilliseconds = payloadReader.ReadInt64();
+            var receivedNonce = payloadReader.ReadBytes(nonce.Length);
+            if (!Enumerable.SequenceEqual(receivedNonce, nonce))
             {
                 throw new InvalidDataException("nonce mismatch");
             }
 
-            return response;
+            return payloadReader.ReadBytes(payload.Length - 16);
         }
     }
 }

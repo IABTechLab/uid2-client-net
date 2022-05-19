@@ -15,7 +15,7 @@ To run the sample app:
 
 ```
 dotnet run --project src/SampleApp/SampleApp.csproj https://integ.uidapi.com \
-	<your-api-token> <advertising-token>
+	<your-api-token> <your-secret-key> <advertising-token>
 ```
 
 ## License

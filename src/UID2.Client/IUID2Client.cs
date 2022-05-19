@@ -66,9 +66,17 @@ namespace UID2.Client
 
     public class UID2ClientFactory
     {
-        public static IUID2Client Create(string endpoint, string authKey)
+        public static IUID2Client Create(string endpoint, string authKey, string secretKey)
         {
-            return new UID2Client(endpoint, authKey);
+            return new UID2Client(endpoint, authKey, secretKey, IdentityScope.UID2);
+        }
+    }
+
+    public class EUIDClientFactory
+    {
+        public static IUID2Client Create(string endpoint, string authKey, string secretKey)
+        {
+            return new UID2Client(endpoint, authKey, secretKey, IdentityScope.EUID);
         }
     }
 }

@@ -33,5 +33,6 @@ namespace UID2.Client
         KeysNotSynced,
         VersionNotSupported,
         InvalidPayloadType,
+        InvalidIdentityScope,
     }
 }

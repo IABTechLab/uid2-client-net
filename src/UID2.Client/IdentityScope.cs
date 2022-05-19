@@ -23,9 +23,9 @@
 
 namespace UID2.Client
 {
-    internal enum PayloadType
+    internal enum IdentityScope
     {
-        ENCRYPTED_DATA = 128,
-        ENCRYPTED_DATA_V3 = 96,
+        UID2 = 0,
+        EUID = 1,
     }
 }

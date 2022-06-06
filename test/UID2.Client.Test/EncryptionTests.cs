@@ -34,6 +34,7 @@ namespace UID2.Client.Test
         private static readonly long MASTER_KEY_ID = 164;
         private static readonly long SITE_KEY_ID = 165;
         private static readonly int SITE_ID = 9000;
+        private static readonly int SITE_ID2 = 2;
         private static readonly byte[] MASTER_SECRET = { 139, 37, 241, 173, 18, 92, 36, 232, 165, 168, 23, 18, 38, 195, 123, 92, 160, 136, 185, 40, 91, 173, 165, 221, 168, 16, 169, 164, 38, 139, 8, 155 };
         private static readonly byte[] SITE_SECRET = { 32, 251, 7, 194, 132, 154, 250, 86, 202, 116, 104, 29, 131, 192, 139, 215, 48, 164, 11, 65, 226, 110, 167, 14, 108, 51, 254, 125, 65, 24, 23, 133 };
         private static readonly DateTime NOW = DateTime.UtcNow;
@@ -176,6 +177,20 @@ namespace UID2.Client.Test
             Assert.Equal(DecryptionStatus.Success, decrypted.Status);
             Assert.Equal(data, decrypted.DecryptedData);
         }
+        
+        [Fact]
+        public void EncryptDataSiteIdFromTokenCustomSiteKeySiteId()
+        {
+            byte[] data = {1, 2, 3, 4, 5, 6};
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            string advertisingToken = UID2TokenGenerator.GenerateUID2TokenV3(EXAMPLE_UID, MASTER_KEY, SITE_ID2, SITE_KEY);
+            var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+            var decrypted = client.DecryptData(encrypted.EncryptedData);
+            Assert.Equal(DecryptionStatus.Success, decrypted.Status);
+            Assert.Equal(data, decrypted.DecryptedData);
+        }
 
         [Fact]
         public void EncryptDataSiteIdAndTokenSet()
@@ -207,6 +222,18 @@ namespace UID2.Client.Test
             client.RefreshJson(KeySetToJson(key));
             var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(key));
             Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
+        }
+        
+        [Fact]
+        public void EncryptDataTokenDecryptKeyExpired()
+        {
+            byte[] data = { 1, 2, 3, 4, 5, 6};
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            Key key = new Key(SITE_KEY_ID, SITE_ID2, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
+            client.RefreshJson(KeySetToJson(MASTER_KEY, key));
+            string advertisingToken = UID2TokenGenerator.GenerateUID2TokenV3(EXAMPLE_UID, MASTER_KEY, SITE_ID, key);
+            var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
         }
 
         [Fact]

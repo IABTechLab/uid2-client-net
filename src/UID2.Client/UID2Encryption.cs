@@ -100,11 +100,11 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
             }
             else
             {
-                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId);
+                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId);
             }
         }
 
@@ -166,11 +166,11 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
             }
             else
             {
-                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId);
+                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId);
             }
         }
 
@@ -186,6 +186,7 @@ namespace UID2.Client
             int siteId = -1;
             if (key == null)
             {
+                int siteKeySiteId = -1;
                 if (keys == null)
                 {
                     return EncryptionDataResponse.MakeError(EncryptionStatus.NotInitialized);
@@ -201,6 +202,7 @@ namespace UID2.Client
                 else if (request.SiteId.HasValue)
                 {
                     siteId = request.SiteId.Value;
+                    siteKeySiteId = siteId;
                 }
                 else
                 {
@@ -213,6 +215,7 @@ namespace UID2.Client
                         }
 
                         siteId = decryptedToken.SiteId.Value;
+                        siteKeySiteId = decryptedToken.SiteKeySiteId.Value;
                     }
                     catch (Exception)
                     {
@@ -220,7 +223,7 @@ namespace UID2.Client
                     }
                 }
 
-                if (!keys.TryGetActiveSiteKey(siteId, now, out key))
+                if (!keys.TryGetActiveSiteKey(siteKeySiteId, now, out key))
                 {
                     return EncryptionDataResponse.MakeError(EncryptionStatus.NotAuthorizedForKey);
                 }

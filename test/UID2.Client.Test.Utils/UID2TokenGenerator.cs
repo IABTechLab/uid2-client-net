@@ -104,6 +104,15 @@ namespace UID2.Client.Test.Utils
             return GenerateUID2TokenV3(uid, masterKey, siteId, siteKey, DefaultParams);
         }
 
+        public static string GenerateEUIDTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
+        {
+            var param = new Params()
+            {
+                IdentityScope = (int) IdentityScope.EUID
+            };
+            return GenerateUID2TokenV3(uid, masterKey, siteId, siteKey, param);
+        }
+
         /// <summary>
         ///  The data can be decrypted with UID2.Client.IUID2Client.Decrypt method
         /// </summary>

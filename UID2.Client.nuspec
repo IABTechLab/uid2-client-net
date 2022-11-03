@@ -7,7 +7,7 @@
     <authors>TTD</authors>
     <owners>TTD</owners>
     <license type="expression">BSD-2-Clause</license>
-    <projectUrl>https://github.com/UnifiedID2/uid2-client-net</projectUrl>
+    <projectUrl>https://github.com/IABTechLab/uid2-client-net</projectUrl>
     <icon>icon.png</icon>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <description>Client for working with advertising UID2 services</description>

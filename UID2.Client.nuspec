@@ -4,10 +4,10 @@
     <id>UID2.Client</id>
     <version>2.0.1</version>
     <title>UID2 C# DSP Client Library</title>
-    <authors>TTD</authors>
-    <owners>TTD</owners>
-    <license type="expression">BSD-2-Clause</license>
-    <projectUrl>https://github.com/UnifiedID2/uid2-client-net</projectUrl>
+    <authors>UID2 team</authors>
+    <owners>UID2 team</owners>
+    <license type="expression">Apache 2.0</license>
+    <projectUrl>https://github.com/IABTechLab/uid2-client-net</projectUrl>
     <icon>icon.png</icon>
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <description>Client for working with advertising UID2 services</description>

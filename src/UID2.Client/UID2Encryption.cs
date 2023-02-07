@@ -21,7 +21,7 @@ namespace UID2.Client
         internal static DecryptionResponse Decrypt(string token, IKeyContainer keys, DateTime now,
             IdentityScope identityScope)
         {
-            string headerStr = token.Substring(0, 3);
+            string headerStr = token.Substring(0, 4);
             Boolean isBase64URL = headerStr.IndexOfAny(BASE64_SPECIAL_CHARS) != -1;
             byte[] data = isBase64URL ? Convert.FromBase64String(headerStr) : Base64UrlEncoder.DecodeBytes(headerStr);
             

@@ -6,6 +6,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UID2.Client.Utils;
+using Microsoft.IdentityModel.Tokens;
 
 namespace UID2.Client
 {
@@ -13,20 +14,51 @@ namespace UID2.Client
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
-
-        internal static DecryptionResponse Decrypt(byte[] encryptedId, IKeyContainer keys, DateTime now, IdentityScope identityScope)
+        private static char[] BASE64_SPECIAL_CHARS = { '+', '/' };
+        public static int ADVERTISING_TOKEN_V3 = 112;
+        public static int ADVERTISING_TOKEN_V4 = 118;
+    
+        internal static DecryptionResponse Decrypt(string token, IKeyContainer keys, DateTime now,
+            IdentityScope identityScope)
         {
-            if (encryptedId[0] == 2)
+            string headerStr = token.Substring(0, 3);
+            Boolean isBase64URL = headerStr.IndexOfAny(BASE64_SPECIAL_CHARS) != -1;
+            byte[] data = isBase64URL ? Convert.FromBase64String(headerStr) : Base64UrlEncoder.DecodeBytes(headerStr);
+            
+            if (data[0] == 2)
             {
-                return DecryptV2(encryptedId, keys, now);
+                return DecryptV2(Convert.FromBase64String(token), keys, now);
             }
-            else if (encryptedId[1] == 112)
+            else if (data[1] == ADVERTISING_TOKEN_V3)
             {
-                return DecryptV3(encryptedId, keys, now, identityScope);
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope);
+            }
+            else if (data[1] == ADVERTISING_TOKEN_V4)
+            {
+                //same as V3 but use 
+                return DecryptV3(Base64UrlEncoder.DecodeBytes(token), keys, now, identityScope);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
+        
+        // private static DecryptionResponse Decrypt(byte[] encryptedId, IKeyContainer keys, DateTime now, IdentityScope identityScope)
+        // {
+        //     if (encryptedId[0] == 2)
+        //     {
+        //         return DecryptV2(encryptedId, keys, now);
+        //     }
+        //     else if (encryptedId[1] == ADVERTISING_TOKEN_V3)
+        //     {
+        //         return DecryptV3(encryptedId, keys, now, identityScope);
+        //     }
+        //     else if (encryptedId[1] == ADVERTISING_TOKEN_V4)
+        //     {
+        //         return DecryptV3(encryptedId, keys, now, identityScope);
+        //     }
+        //
+        //     return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
+        // }
 
         private static DecryptionResponse DecryptV2(byte[] encryptedId, IKeyContainer keys, DateTime now)
         {
@@ -185,7 +217,7 @@ namespace UID2.Client
                 {
                     try
                     {
-                        DecryptionResponse decryptedToken = Decrypt(Convert.FromBase64String(request.AdvertisingToken), keys, now, identityScope);
+                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, identityScope);
                         if (!decryptedToken.Success)
                         {
                             return EncryptionDataResponse.MakeError(EncryptionStatus.TokenDecryptFailure);

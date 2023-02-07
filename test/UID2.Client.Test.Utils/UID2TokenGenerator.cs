@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.IdentityModel.Tokens;
 using UID2.Client.Utils;
 
 namespace UID2.Client.Test.Utils
@@ -16,6 +17,9 @@ namespace UID2.Client.Test.Utils
     /// </summary>
     public static class UID2TokenGenerator
     {
+        public static int ADVERTISING_TOKEN_V3 = 112;
+        public static int ADVERTISING_TOKEN_V4 = 118;
+        
         public class Params
         {
             public DateTime TokenExpiry = DateTime.UtcNow.AddHours(1);
@@ -78,7 +82,12 @@ namespace UID2.Client.Test.Utils
 
         public static string GenerateUID2TokenV3(string uid, Key masterKey, int siteId, Key siteKey)
         {
-            return GenerateUID2TokenV3(uid, masterKey, siteId, siteKey, DefaultParams);
+            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, DefaultParams, false);
+        }
+        
+        public static string GenerateUID2TokenV4(string uid, Key masterKey, int siteId, Key siteKey)
+        {
+            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, DefaultParams, true);
         }
 
         public static string GenerateEUIDTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
@@ -87,7 +96,16 @@ namespace UID2.Client.Test.Utils
             {
                 IdentityScope = (int) IdentityScope.EUID
             };
-            return GenerateUID2TokenV3(uid, masterKey, siteId, siteKey, param);
+            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, false);
+        }
+        
+        public static string GenerateEUIDTokenV4(string uid, Key masterKey, int siteId, Key siteKey)
+        {
+            var param = new Params()
+            {
+                IdentityScope = (int) IdentityScope.EUID
+            };
+            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, true);
         }
 
         /// <summary>
@@ -99,7 +117,7 @@ namespace UID2.Client.Test.Utils
         /// <param name="siteKey">site-specific key to encrypt the UID with first before encrypting again with master key</param>
         /// <param name="encryptParams"></param>
         /// <returns>the encrypted UID in the form of UID2 Token</returns>
-        public static string GenerateUID2TokenV3(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
+        public static string GenerateUID2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, bool useBase64URLEncoding)
         {
             var sitePayload = new MemoryStream();
             var sitePayloadWriter = new BigEndianByteWriter(sitePayload);
@@ -135,7 +153,7 @@ namespace UID2.Client.Test.Utils
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
             rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
-            rootStreamWriter.Write((byte)112);
+            rootStreamWriter.Write((byte) ADVERTISING_TOKEN_V3);
             rootStreamWriter.Write((int)masterKey.Id);
 
             byte[] masterIv = new byte[12];
@@ -143,8 +161,16 @@ namespace UID2.Client.Test.Utils
             rootStreamWriter.Write(masterIv);
             rootStreamWriter.Write(EncryptGCM(masterPayload.ToArray(), masterIv, masterKey.Secret));
 
-            return Convert.ToBase64String(rootStream.ToArray());
+            if (useBase64URLEncoding)
+            {
+                return Base64UrlEncoder.Encode(rootStream.ToArray());
+            }
+            else
+            {
+                return Convert.ToBase64String(rootStream.ToArray());
+            }
         }
+
 
         public static string EncryptDataV2(byte[] data, Key key, int siteId, DateTime now)
         {

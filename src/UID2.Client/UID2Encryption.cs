@@ -35,31 +35,13 @@ namespace UID2.Client
             }
             else if (data[1] == ADVERTISING_TOKEN_V4)
             {
-                //same as V3 but use 
+                //same as V3 but use Base64URL encoding
                 return DecryptV3(Base64UrlEncoder.DecodeBytes(token), keys, now, identityScope);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
         
-        // private static DecryptionResponse Decrypt(byte[] encryptedId, IKeyContainer keys, DateTime now, IdentityScope identityScope)
-        // {
-        //     if (encryptedId[0] == 2)
-        //     {
-        //         return DecryptV2(encryptedId, keys, now);
-        //     }
-        //     else if (encryptedId[1] == ADVERTISING_TOKEN_V3)
-        //     {
-        //         return DecryptV3(encryptedId, keys, now, identityScope);
-        //     }
-        //     else if (encryptedId[1] == ADVERTISING_TOKEN_V4)
-        //     {
-        //         return DecryptV3(encryptedId, keys, now, identityScope);
-        //     }
-        //
-        //     return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
-        // }
-
         private static DecryptionResponse DecryptV2(byte[] encryptedId, IKeyContainer keys, DateTime now)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));

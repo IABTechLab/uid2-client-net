@@ -23,7 +23,7 @@ namespace UID2.Client
         {
             string headerStr = token.Substring(0, 4);
             Boolean isBase64URL = headerStr.IndexOfAny(BASE64_SPECIAL_CHARS) != -1;
-            byte[] data = isBase64URL ? Convert.FromBase64String(headerStr) : Base64UrlEncoder.DecodeBytes(headerStr);
+            byte[] data = isBase64URL ? Base64UrlEncoder.DecodeBytes(headerStr) : Convert.FromBase64String(headerStr);
             
             if (data[0] == 2)
             {

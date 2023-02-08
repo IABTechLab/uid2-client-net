@@ -15,8 +15,11 @@ namespace UID2.Client
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
+        //showing as "AHA..." in the Base64 Encoding (Base64 'H' is 000111 and 112 is 01110000)
         public static int ADVERTISING_TOKEN_V3 = 112;
-        public static int ADVERTISING_TOKEN_V4 = 118;
+        //showing as "AIA..." in the Base64URL Encoding ('H' is followed by 'I' hence
+        //this choice for the next token version) (Base64 'I' is 001000 and 128 is 10000000)
+        public static int ADVERTISING_TOKEN_V4 = 128;
     
         internal static DecryptionResponse Decrypt(string token, IKeyContainer keys, DateTime now,
             IdentityScope identityScope)

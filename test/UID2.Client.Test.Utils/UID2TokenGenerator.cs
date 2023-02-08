@@ -18,7 +18,7 @@ namespace UID2.Client.Test.Utils
     public static class UID2TokenGenerator
     {
         public static int ADVERTISING_TOKEN_V3 = 112;
-        public static int ADVERTISING_TOKEN_V4 = 118;
+        public static int ADVERTISING_TOKEN_V4 = 128;
         
         public class Params
         {

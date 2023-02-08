@@ -6,7 +6,7 @@ using Xunit;
 
 namespace UID2.Client.Test
 {
-    public class EncryptionTests
+    public class EncryptionTestsV3
     {
         private static readonly long MASTER_KEY_ID = 164;
         private static readonly long SITE_KEY_ID = 165;

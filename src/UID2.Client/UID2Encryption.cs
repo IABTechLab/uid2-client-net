@@ -14,7 +14,7 @@ namespace UID2.Client
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
-        private static char[] BASE64_SPECIAL_CHARS = { '+', '/' };
+        private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
         public static int ADVERTISING_TOKEN_V3 = 112;
         public static int ADVERTISING_TOKEN_V4 = 118;
     
@@ -22,8 +22,8 @@ namespace UID2.Client
             IdentityScope identityScope)
         {
             string headerStr = token.Substring(0, 4);
-            Boolean isBase64URL = headerStr.IndexOfAny(BASE64_SPECIAL_CHARS) != -1;
-            byte[] data = isBase64URL ? Base64UrlEncoder.DecodeBytes(headerStr) : Convert.FromBase64String(headerStr);
+            Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
+            byte[] data = isBase64UrlEncoding ? Base64UrlEncoder.DecodeBytes(headerStr) : Convert.FromBase64String(headerStr);
             
             if (data[0] == 2)
             {

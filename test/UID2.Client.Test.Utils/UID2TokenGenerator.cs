@@ -158,7 +158,7 @@ namespace UID2.Client.Test.Utils
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
             rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
-            rootStreamWriter.Write((byte) (v4AdToken?ADVERTISING_TOKEN_V4:ADVERTISING_TOKEN_V3);
+            rootStreamWriter.Write((byte) (v4AdToken?ADVERTISING_TOKEN_V4:ADVERTISING_TOKEN_V3));
             rootStreamWriter.Write((int)masterKey.Id);
 
             byte[] masterIv = new byte[12];

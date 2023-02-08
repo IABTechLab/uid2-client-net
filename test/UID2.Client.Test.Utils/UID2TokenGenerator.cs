@@ -89,6 +89,11 @@ namespace UID2.Client.Test.Utils
         {
             return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, DefaultParams, true);
         }
+        
+        public static string GenerateUID2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
+        {
+            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, true);
+        }
 
         public static string GenerateEUIDTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
         {

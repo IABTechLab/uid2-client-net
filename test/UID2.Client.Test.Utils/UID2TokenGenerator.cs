@@ -122,7 +122,7 @@ namespace UID2.Client.Test.Utils
         /// <param name="siteKey">site-specific key to encrypt the UID with first before encrypting again with master key</param>
         /// <param name="encryptParams"></param>
         /// <returns>the encrypted UID in the form of UID2 Token</returns>
-        public static string GenerateUID2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, bool useBase64URLEncoding)
+        public static string GenerateUID2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, bool v4AdToken)
         {
             var sitePayload = new MemoryStream();
             var sitePayloadWriter = new BigEndianByteWriter(sitePayload);
@@ -158,7 +158,7 @@ namespace UID2.Client.Test.Utils
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
             rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
-            rootStreamWriter.Write((byte) ADVERTISING_TOKEN_V3);
+            rootStreamWriter.Write((byte) (v4AdToken?ADVERTISING_TOKEN_V4:ADVERTISING_TOKEN_V3);
             rootStreamWriter.Write((int)masterKey.Id);
 
             byte[] masterIv = new byte[12];
@@ -166,7 +166,7 @@ namespace UID2.Client.Test.Utils
             rootStreamWriter.Write(masterIv);
             rootStreamWriter.Write(EncryptGCM(masterPayload.ToArray(), masterIv, masterKey.Secret));
 
-            if (useBase64URLEncoding)
+            if (v4AdToken)
             {
                 return Base64UrlEncoder.Encode(rootStream.ToArray());
             }

@@ -39,6 +39,7 @@ namespace UID2.Client
             else if (data[1] == ADVERTISING_TOKEN_V4)
             {
                 //same as V3 but use Base64URL encoding
+                //Base64UrlEncoder can handle padded/non-padded encoding fine 
                 return DecryptV3(Base64UrlEncoder.DecodeBytes(token), keys, now, identityScope);
             }
 

@@ -26,7 +26,7 @@ namespace UID2.Client
         {
             string headerStr = token.Substring(0, 4);
             Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
-            byte[] data = isBase64UrlEncoding ? Base64UrlEncoder.DecodeBytes(headerStr) : Convert.FromBase64String(headerStr);
+            byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
             
             if (data[0] == 2)
             {
@@ -39,8 +39,7 @@ namespace UID2.Client
             else if (data[1] == ADVERTISING_TOKEN_V4)
             {
                 //same as V3 but use Base64URL encoding
-                //Base64UrlEncoder can handle padded/non-padded encoding fine 
-                return DecryptV3(Base64UrlEncoder.DecodeBytes(token), keys, now, identityScope);
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);

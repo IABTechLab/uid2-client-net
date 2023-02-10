@@ -33,9 +33,9 @@ namespace UID2.Client.Test.Utils
 
         public static Params DefaultParams => new Params();
 
-        public static string GenerateUID2TokenV2(string uid, Key masterKey, int siteId, Key siteKey)
+        public static string GenerateUid2TokenV2(string uid, Key masterKey, int siteId, Key siteKey)
         {
-            return GenerateUID2TokenV2(uid, masterKey, siteId, siteKey, DefaultParams);
+            return GenerateUid2TokenV2(uid, masterKey, siteId, siteKey, DefaultParams);
         }
         
         /// <summary>
@@ -47,7 +47,7 @@ namespace UID2.Client.Test.Utils
         /// <param name="siteKey">site-specific key to encrypt the UID with first before encrypting again with master key</param>
         /// <param name="encryptParams"></param>
         /// <returns>the encrypted UID in the form of UID2 Token</returns>
-        public static string GenerateUID2TokenV2(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
+        public static string GenerateUid2TokenV2(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
             var uidBytes = Encoding.UTF8.GetBytes(uid);
             var identityStream = new MemoryStream();
@@ -80,42 +80,32 @@ namespace UID2.Client.Test.Utils
             return Convert.ToBase64String(rootStream.ToArray());
         }
 
-        public static string GenerateUID2TokenV3(string uid, Key masterKey, int siteId, Key siteKey)
+        public static string GenerateUid2TokenV3(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, DefaultParams, false);
-        }
-        
-        public static string GenerateUID2TokenV3(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
-        {
-            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, false);
-        }
-        
-        public static string GenerateUID2TokenV4(string uid, Key masterKey, int siteId, Key siteKey)
-        {
-            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, DefaultParams, true);
-        }
-        
-        public static string GenerateUID2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
-        {
-            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, true);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, false);
         }
 
-        public static string GenerateEUIDTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
+        public static string GenerateUid2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            var param = new Params()
-            {
-                IdentityScope = (int) IdentityScope.EUID
-            };
-            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, false);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, true);
         }
         
-        public static string GenerateEUIDTokenV4(string uid, Key masterKey, int siteId, Key siteKey)
+        public static string GenerateEuidTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
         {
             var param = new Params()
             {
                 IdentityScope = (int) IdentityScope.EUID
             };
-            return GenerateUID2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, true);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, false);
+        }
+        
+        public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey)
+        {
+            var param = new Params()
+            {
+                IdentityScope = (int) IdentityScope.EUID
+            };
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, true);
         }
 
         /// <summary>
@@ -127,7 +117,7 @@ namespace UID2.Client.Test.Utils
         /// <param name="siteKey">site-specific key to encrypt the UID with first before encrypting again with master key</param>
         /// <param name="encryptParams"></param>
         /// <returns>the encrypted UID in the form of UID2 Token</returns>
-        private static string GenerateUID2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, bool v4AdToken)
+        private static string GenerateUid2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, bool v4AdToken)
         {
             var sitePayload = new MemoryStream();
             var sitePayloadWriter = new BigEndianByteWriter(sitePayload);
@@ -173,7 +163,7 @@ namespace UID2.Client.Test.Utils
 
             if (v4AdToken)
             {
-                return Base64UrlEncoder.Encode(rootStream.ToArray());
+                return UID2Base64UrlCoder.Encode(rootStream.ToArray());
             }
             else
             {

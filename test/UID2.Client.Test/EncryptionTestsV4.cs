@@ -22,24 +22,35 @@ namespace UID2.Client.Test
         private static readonly string EXAMPLE_UID = "ywsvDNINiZOVSsfkHpLpSJzXzhr6Jx9Z/4Q0+lsEUvM=";
         private static readonly string CLIENT_SECRET = "ioG3wKxAokmp+rERx6A4kM/13qhyolUXIu14WN16Spo=";
 
+        // unit tests to ensure the base64url encoding and decoding are identical in all supported
+        // uid2 client sdks in different programming languages
         [Fact]
-        public void crossPlatformConsistencyCheck_Encrypt()
+        public void crossPlatformConsistencyCheck_Base64UrlTest()
         {
-            //the Base64 equivalent is "/+AraW9HM3dLeEFva21wK3JFUng2QTRrTS8xM3FoeW9sVVhJdTE0VzE2U3BvPQ==" 
+            byte[] rawInput = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99, 0x99 };
+
+            //the Base64 equivalent is "/+CI/+6ZmQ==" 
             //and we want the Base64URL encoded to remove the '=' padding
-            string expectedBase64URLStr = "_-AraW9HM3dLeEFva21wK3JFUng2QTRrTS8xM3FoeW9sVVhJdTE0VzE2U3BvPQ";
-            string base64UrlEncodedInput = "ioG3wKxAokmp+rERx6A4kM/13qhyolUXIu14W16Spo=";
-            
+            string expectedBase64URLStr = "_-CI_-6ZmQ";
             var stream = new MemoryStream();
             var writer = new BigEndianByteWriter(stream);
-            writer.Write((byte)0xff);
-            writer.Write((byte)0xE0);
-            writer.Write(base64UrlEncodedInput);
-            string base64UrlEncodedStr = Base64UrlEncoder.Encode(stream.ToArray()); 
-            
+            for (int i = 0; i < rawInput.Length; i++)
+            {
+                writer.Write(rawInput[i]);
+            }
+
+            string base64UrlEncodedStr = UID2Base64UrlCoder.Encode(stream.ToArray());
+            //string base64UrlEncodedStr = Convert.ToBase64String(stream.ToArray());
             Assert.Equal(expectedBase64URLStr, base64UrlEncodedStr);
+
+            byte[] decoded = UID2Base64UrlCoder.Decode(base64UrlEncodedStr);
+            for (int i = 0; i < rawInput.Length; i++)
+            {
+                Assert.Equal(rawInput[i], decoded[i]);
+            }
         }
 
+        // verify that the Base64URL decoder can decode Base64URL string with NO '=' paddings added 
         [Fact]
         public void crossPlatformConsistencyCheck_Decrypt()
         {
@@ -69,15 +80,16 @@ namespace UID2.Client.Test
 
             UID2Client client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            
+
             //verify that the dynamically created ad token can be decrypted
-            String runtimeAdvertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, masterKey, SITE_ID, siteKey, encryptParams);
+            String runtimeAdvertisingToken =
+                UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, masterKey, SITE_ID, siteKey, encryptParams);
             //best effort check as the token might simply just not require padding 
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('='));
-            
+
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('+'));
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('/'));
-            
+
             var res = client.Decrypt(crossPlatformAdvertisingToken, NOW);
             Assert.Equal(EXAMPLE_UID, res.Uid);
             //can also decrypt a known token generated from other SDK
@@ -165,46 +177,6 @@ namespace UID2.Client.Test
             res = client.Decrypt(advertisingToken, expiry.AddSeconds(-1));
             Assert.Equal(EXAMPLE_UID, res.Uid);
         }
-        //
-        // [Fact]
-        // public void EncryptDataSpecificKeyAndIv()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     byte[] iv = new byte[12];
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY).WithInitializationVector(iv));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var decrypted = client.DecryptData(encrypted.EncryptedData);
-        //     Assert.Equal(DecryptionStatus.Success, decrypted.Status);
-        //     Assert.Equal(data, decrypted.DecryptedData);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataSpecificKeyAndGeneratedIv()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var decrypted = client.DecryptData(encrypted.EncryptedData);
-        //     Assert.Equal(DecryptionStatus.Success, decrypted.Status);
-        //     Assert.Equal(data, decrypted.DecryptedData);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataSpecificSiteId()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithSiteId(SITE_KEY.SiteId));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     var decrypted = client.DecryptData(encrypted.EncryptedData);
-        //     Assert.Equal(DecryptionStatus.Success, decrypted.Status);
-        //     Assert.Equal(data, decrypted.DecryptedData);
-        // }
 
         [Fact]
         public void EncryptDataSiteIdFromToken()
@@ -245,27 +217,6 @@ namespace UID2.Client.Test
                 client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken).WithSiteId(SITE_KEY.SiteId)));
         }
 
-        // [Fact]
-        // public void EncryptDataTokenDecryptFailed()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken("bogus-token"));
-        //     Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataKeyExpired()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
-        //     client.RefreshJson(KeySetToJson(key));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(key));
-        //     Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
-        // }
-        
         [Fact]
         public void EncryptDataTokenDecryptKeyExpired()
         {
@@ -277,80 +228,6 @@ namespace UID2.Client.Test
             var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
         }
-
-        // [Fact]
-        // public void EncryptDataKeyInactive()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddDays(1), NOW.AddDays(2), MakeTestSecret(9));
-        //     client.RefreshJson(KeySetToJson(key));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(key));
-        //     Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataKeyExpiredCustomNow()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY).WithNow(SITE_KEY.Expires));
-        //     Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataKeyInactiveCustomNow()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY).WithNow(SITE_KEY.Activates.AddSeconds(-1)));
-        //     Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataNoSiteKey()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(MASTER_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithSiteId(205));
-        //     Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
-        // }
-
-        // [Fact]
-        // public void EncryptDataSiteKeyExpired()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
-        //     client.RefreshJson(KeySetToJson(MASTER_KEY, key));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithSiteId(key.SiteId));
-        //     Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataSiteKeyInactive()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddDays(1), NOW.AddDays(2), MakeTestSecret(9));
-        //     client.RefreshJson(KeySetToJson(MASTER_KEY, key));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithSiteId(key.SiteId));
-        //     Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void EncryptDataSiteKeyInactiveCustomNow()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-        //     var encrypted = client.EncryptData(
-        //         EncryptionDataRequest.ForData(data).WithSiteId(SITE_KEY.SiteId).WithNow(SITE_KEY.Activates.AddSeconds(-1)));
-        //     Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
-        // }
 
         [Fact]
         public void EncryptDataTokenExpired()
@@ -373,68 +250,6 @@ namespace UID2.Client.Test
             Assert.Equal(data, decrypted.DecryptedData);
             Assert.Equal(now, decrypted.EncryptedAt);
         }
-
-        // [Fact]
-        // public void DecryptDataBadPayloadType()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     byte[] encryptedBytes = Convert.FromBase64String(encrypted.EncryptedData);
-        //     encryptedBytes[0] = 0;
-        //     var decrypted = client.DecryptData(Convert.ToBase64String(encryptedBytes));
-        //     Assert.Equal(DecryptionStatus.InvalidPayloadType, decrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void DecryptDataBadVersion()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     byte[] encryptedBytes = Convert.FromBase64String(encrypted.EncryptedData);
-        //     encryptedBytes[1] = 0;
-        //     var decrypted = client.DecryptData(Convert.ToBase64String(encryptedBytes));
-        //     Assert.Equal(DecryptionStatus.VersionNotSupported, decrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void DecryptDataBadPayload()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6 };
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     byte[] encryptedBytes = Convert.FromBase64String(encrypted.EncryptedData);
-        //
-        //     byte[] encryptedBytesMod = new byte[encryptedBytes.Length + 1];
-        //     Array.Copy(encryptedBytes, encryptedBytesMod, encryptedBytes.Length);
-        //     var decrypted = client.DecryptData(Convert.ToBase64String(encryptedBytesMod));
-        //     Assert.Equal(DecryptionStatus.InvalidPayload, decrypted.Status);
-        //
-        //     encryptedBytesMod = new byte[encryptedBytes.Length - 2];
-        //     Array.Copy(encryptedBytes, encryptedBytesMod, encryptedBytes.Length-2);
-        //     decrypted = client.DecryptData(Convert.ToBase64String(encryptedBytesMod));
-        //     Assert.Equal(DecryptionStatus.InvalidPayload, decrypted.Status);
-        // }
-        //
-        // [Fact]
-        // public void DecryptDataNoDecryptionKey()
-        // {
-        //     byte[] data = { 1, 2, 3, 4, 5, 6};
-        //     var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-        //     client.RefreshJson(KeySetToJson(SITE_KEY));
-        //     var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithKey(SITE_KEY));
-        //     Assert.Equal(EncryptionStatus.Success, encrypted.Status);
-        //     client.RefreshJson(KeySetToJson(MASTER_KEY));
-        //     var decrypted = client.DecryptData(encrypted.EncryptedData);
-        //     Assert.Equal(DecryptionStatus.NotAuthorizedForKey, decrypted.Status);
-        // }
 
         private static string KeySetToJson(params Key[] keys)
         {

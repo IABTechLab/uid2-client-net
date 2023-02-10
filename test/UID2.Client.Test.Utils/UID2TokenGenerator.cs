@@ -17,9 +17,6 @@ namespace UID2.Client.Test.Utils
     /// </summary>
     public static class UID2TokenGenerator
     {
-        public static int ADVERTISING_TOKEN_V3 = 112;
-        public static int ADVERTISING_TOKEN_V4 = 128;
-        
         public class Params
         {
             public DateTime TokenExpiry = DateTime.UtcNow.AddHours(1);
@@ -155,7 +152,7 @@ namespace UID2.Client.Test.Utils
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
             rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
-            rootStreamWriter.Write((byte) (adTokenVersion==AdvertisingTokenVersion.V4?ADVERTISING_TOKEN_V4:ADVERTISING_TOKEN_V3));
+            rootStreamWriter.Write((byte)adTokenVersion);
             rootStreamWriter.Write((int)masterKey.Id);
 
             byte[] masterIv = new byte[12];

@@ -44,7 +44,8 @@ namespace UID2.Client.Test
             Assert.Equal(expectedBase64URLStr, base64UrlEncodedStr);
 
             byte[] decoded = UID2Base64UrlCoder.Decode(base64UrlEncodedStr);
-            for (int i = 0; i < rawInput.Length; i++)
+            Assert.Equal(rawInput.Length, decoded.Length);
+            for (int i = 0; i < decoded.Length; i++)
             {
                 Assert.Equal(rawInput[i], decoded[i]);
             }

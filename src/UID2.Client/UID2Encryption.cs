@@ -15,12 +15,7 @@ namespace UID2.Client
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
-        //showing as "AHA..." in the Base64 Encoding (Base64 'H' is 000111 and 112 is 01110000)
-        public static int ADVERTISING_TOKEN_V3 = 112;
-        //showing as "AIA..." in the Base64URL Encoding ('H' is followed by 'I' hence
-        //this choice for the next token version) (Base64 'I' is 001000 and 128 is 10000000)
-        public static int ADVERTISING_TOKEN_V4 = 128;
-    
+
         internal static DecryptionResponse Decrypt(string token, IKeyContainer keys, DateTime now,
             IdentityScope identityScope)
         {
@@ -32,11 +27,11 @@ namespace UID2.Client
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now);
             }
-            else if (data[1] == ADVERTISING_TOKEN_V3)
+            else if (data[1] == (int) AdvertisingTokenVersion.V3)
             {
                 return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope);
             }
-            else if (data[1] == ADVERTISING_TOKEN_V4)
+            else if (data[1] == (int) AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
                 return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope);

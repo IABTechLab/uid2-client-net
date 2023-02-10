@@ -82,12 +82,12 @@ namespace UID2.Client.Test.Utils
 
         public static string GenerateUid2TokenV3(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, false);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V3);
         }
 
         public static string GenerateUid2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, true);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
         
         public static string GenerateEuidTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
@@ -96,7 +96,7 @@ namespace UID2.Client.Test.Utils
             {
                 IdentityScope = (int) IdentityScope.EUID
             };
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, false);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V3);
         }
         
         public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey)
@@ -105,7 +105,7 @@ namespace UID2.Client.Test.Utils
             {
                 IdentityScope = (int) IdentityScope.EUID
             };
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, true);
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V4);
         }
 
         /// <summary>
@@ -116,8 +116,10 @@ namespace UID2.Client.Test.Utils
         /// <param name="siteId">The unique identifier of the publisher</param>
         /// <param name="siteKey">site-specific key to encrypt the UID with first before encrypting again with master key</param>
         /// <param name="encryptParams"></param>
+        /// <param name="adTokenVersion"></param>
         /// <returns>the encrypted UID in the form of UID2 Token</returns>
-        private static string GenerateUid2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, bool v4AdToken)
+        private static string GenerateUid2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey,
+            Params encryptParams, AdvertisingTokenVersion adTokenVersion)
         {
             var sitePayload = new MemoryStream();
             var sitePayloadWriter = new BigEndianByteWriter(sitePayload);
@@ -153,7 +155,7 @@ namespace UID2.Client.Test.Utils
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
             rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
-            rootStreamWriter.Write((byte) (v4AdToken?ADVERTISING_TOKEN_V4:ADVERTISING_TOKEN_V3));
+            rootStreamWriter.Write((byte) (adTokenVersion==AdvertisingTokenVersion.V4?ADVERTISING_TOKEN_V4:ADVERTISING_TOKEN_V3));
             rootStreamWriter.Write((int)masterKey.Id);
 
             byte[] masterIv = new byte[12];
@@ -161,7 +163,7 @@ namespace UID2.Client.Test.Utils
             rootStreamWriter.Write(masterIv);
             rootStreamWriter.Write(EncryptGCM(masterPayload.ToArray(), masterIv, masterKey.Secret));
 
-            if (v4AdToken)
+            if (adTokenVersion == AdvertisingTokenVersion.V4)
             {
                 return UID2Base64UrlCoder.Encode(rootStream.ToArray());
             }

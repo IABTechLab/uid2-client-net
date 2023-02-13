@@ -6,6 +6,7 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UID2.Client.Utils;
+using Microsoft.IdentityModel.Tokens;
 
 namespace UID2.Client
 {
@@ -13,21 +14,37 @@ namespace UID2.Client
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
+        private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
-        internal static DecryptionResponse Decrypt(byte[] encryptedId, IKeyContainer keys, DateTime now, IdentityScope identityScope)
+        internal static DecryptionResponse Decrypt(string token, IKeyContainer keys, DateTime now,
+            IdentityScope identityScope)
         {
-            if (encryptedId[0] == 2)
+            if (token.Length < 4)
             {
-                return DecryptV2(encryptedId, keys, now);
+                DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
-            else if (encryptedId[1] == 112)
+
+            string headerStr = token.Substring(0, 4);
+            Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
+            byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
+            
+            if (data[0] == 2)
             {
-                return DecryptV3(encryptedId, keys, now, identityScope);
+                return DecryptV2(Convert.FromBase64String(token), keys, now);
+            }
+            else if (data[1] == (int) AdvertisingTokenVersion.V3)
+            {
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope);
+            }
+            else if (data[1] == (int) AdvertisingTokenVersion.V4)
+            {
+                //same as V3 but use Base64URL encoding
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
-
+        
         private static DecryptionResponse DecryptV2(byte[] encryptedId, IKeyContainer keys, DateTime now)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
@@ -185,7 +202,7 @@ namespace UID2.Client
                 {
                     try
                     {
-                        DecryptionResponse decryptedToken = Decrypt(Convert.FromBase64String(request.AdvertisingToken), keys, now, identityScope);
+                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, identityScope);
                         if (!decryptedToken.Success)
                         {
                             return EncryptionDataResponse.MakeError(EncryptionStatus.TokenDecryptFailure);

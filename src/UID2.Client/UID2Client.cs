@@ -46,7 +46,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(Convert.FromBase64String(token), container, now, _identityScope);
+                return UID2Encryption.Decrypt(token, container, now, _identityScope);
             }
             catch (Exception)
             {

@@ -25,7 +25,7 @@ namespace UID2.Client.Test
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
-            String advertisingToken = UID2TokenGenerator.GenerateUID2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
+            String advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
@@ -35,7 +35,7 @@ namespace UID2.Client.Test
         public void EmptyKeyContainer()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            var advertisingToken = UID2TokenGenerator.GenerateUID2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
+            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.NotInitialized, res.Status);
@@ -45,7 +45,7 @@ namespace UID2.Client.Test
         public void ExpiredKeyContainer()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            var advertisingToken = UID2TokenGenerator.GenerateUID2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
+            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
 
             Key masterKeyExpired = new Key(MASTER_KEY_ID, -1, NOW, NOW.AddHours(-2), NOW.AddHours(-1), MASTER_SECRET);
             Key siteKeyExpired = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddHours(-2), NOW.AddHours(-1), SITE_SECRET);
@@ -60,7 +60,7 @@ namespace UID2.Client.Test
         public void NotAuthorizedForKey()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            var advertisingToken = UID2TokenGenerator.GenerateUID2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
+            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
 
             Key anotherMasterKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
             Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1), SITE_SECRET);
@@ -74,7 +74,7 @@ namespace UID2.Client.Test
         public void InvalidPayload()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            byte[] payload = Convert.FromBase64String(UID2TokenGenerator.GenerateUID2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY));
+            byte[] payload = Convert.FromBase64String(UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY));
             var advertisingToken = Convert.ToBase64String(payload.SkipLast(1).ToArray());
 
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
@@ -91,7 +91,7 @@ namespace UID2.Client.Test
 
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = UID2TokenGenerator.GenerateUID2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
+            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
 
             var res = client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);

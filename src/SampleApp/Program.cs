@@ -32,7 +32,7 @@ namespace app
                 return;
             }
 
-            var result = client.Decrypt(_advertisingToken, DateTime.UtcNow);
+            var result = client.Decrypt(_advertisingToken);
             Console.WriteLine($"DecryptedSuccess={result.Success} Status={result.Status}");
             Console.WriteLine($"UID={result.Uid}");
             Console.WriteLine($"EstablishedAt={result.Established}");
@@ -59,7 +59,7 @@ namespace app
 
             for (int i = 0; i < 5; ++i)
             {
-                var result = client.Decrypt(_advertisingToken, DateTime.UtcNow);
+                var result = client.Decrypt(_advertisingToken);
                 Console.WriteLine($"DecryptSuccess={result.Success} Status={result.Status} UID={result.Uid}");
                 Console.Out.Flush();
                 Thread.Sleep(TimeSpan.FromSeconds(5));
@@ -68,9 +68,9 @@ namespace app
             refreshThread.Join();
         }
 
-        static void ExampleEncryptDecryptData()
-        {
-            StartExample("Encrypt and Decrypt Data");
+        static void ExampleSharing()
+        { 
+            StartExample("Encrypt and Decrypt UIDs for Sharing");
 
             var client = UID2ClientFactory.Create(_baseUrl, _authKey, _secretKey);
             var refreshResult = client.Refresh();
@@ -80,25 +80,26 @@ namespace app
                 return;
             }
 
-            var data = "Hello World!";
-            var encrypted = client.EncryptData(EncryptionDataRequest.ForData(Encoding.UTF8.GetBytes(data)).WithAdvertisingToken(_advertisingToken));
+            var rawUid = "P2xdbu2ldlpXV1z6n3bET7T1g0xfqmldZPDdPTvydRQ=";
+            var encrypted = client.Encrypt(rawUid);
+
             if (!encrypted.Success)
             {
                 Console.WriteLine($"Failed to encrypt data: {encrypted.Status}");
                 return;
             }
 
-            var decrypted = client.DecryptData(encrypted.EncryptedData);
+            var decrypted = client.Decrypt(encrypted.EncryptedData);
             if (!decrypted.Success)
             {
                 Console.WriteLine($"Failed to decrypt data: {decrypted.Status}");
                 return;
             }
 
-            Console.WriteLine($"Original data: {data}");
+            Console.WriteLine($"Original data: {rawUid}");
             Console.WriteLine($"Encrypted    : {encrypted.EncryptedData}");
-            Console.WriteLine($"Decrypted    : {Encoding.UTF8.GetString(decrypted.DecryptedData)}");
-            Console.WriteLine($"Encrypted at : {decrypted.EncryptedAt}");
+            Console.WriteLine($"Decrypted    : {decrypted.Uid}");
+            Console.WriteLine($"Encrypted at : {decrypted.Established}");
         }
 
         static int Main(string[] args)
@@ -114,9 +115,10 @@ namespace app
             _secretKey = args[2];
             _advertisingToken = args[3];
 
+
             ExampleBasicRefresh();
             ExampleAutoRefresh();
-            ExampleEncryptDecryptData();
+            ExampleSharing();
 
             return 0;
 

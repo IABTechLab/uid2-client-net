@@ -5,17 +5,11 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using UID2.Client.Utils;
+using UID2.Client;
 
-namespace UID2.Client.Test.Utils
+namespace UID2.Client.Utils
 {
-    /// <summary>
-    /// Utility class to generate UID2 Token, this should be used for testing
-    /// bid request handling logic to ensure it could decrypt the raw UID2 from the UID2 Token provided
-    /// by SSPs/publishers. Production system should not need this.
-    /// </summary>
-    public static class UID2TokenGenerator
+    internal static class UID2TokenGenerator
     {
         public class Params
         {

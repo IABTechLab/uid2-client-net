@@ -6,7 +6,6 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using UID2.Client.Utils;
-using Microsoft.IdentityModel.Tokens;
 
 namespace UID2.Client
 {
@@ -16,8 +15,7 @@ namespace UID2.Client
         public const int GCM_IV_LENGTH = 12;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
-        internal static DecryptionResponse Decrypt(string token, IKeyContainer keys, DateTime now,
-            IdentityScope identityScope)
+        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, IdentityScope identityScope)
         {
             if (token.Length < 4)
             {
@@ -45,7 +43,7 @@ namespace UID2.Client
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
         
-        private static DecryptionResponse DecryptV2(byte[] encryptedId, IKeyContainer keys, DateTime now)
+        private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
@@ -57,7 +55,7 @@ namespace UID2.Client
             Key masterKey = null;
             if (!keys.TryGetKey(masterKeyId, out masterKey))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
+                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForMasterKey);
             }
 
             var masterDecrypted = Decrypt(new ByteArraySlice(encryptedId, 21, encryptedId.Length - 21), reader.ReadBytes(16), masterKey.Secret);
@@ -92,6 +90,7 @@ namespace UID2.Client
             var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
 
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
+
             if (expiry < now)
             {
                 return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
@@ -102,7 +101,7 @@ namespace UID2.Client
             }
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, IKeyContainer keys, DateTime now, IdentityScope identityScope)
+        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
@@ -120,7 +119,7 @@ namespace UID2.Client
             Key masterKey = null;
             if (!keys.TryGetKey(masterKeyId, out masterKey))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
+                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForMasterKey);
             }
 
             var masterDecrypted = DecryptGCM(new ByteArraySlice(encryptedId, 6, encryptedId.Length - 6), masterKey.Secret);
@@ -168,7 +167,45 @@ namespace UID2.Client
             }
         }
 
-        internal static EncryptionDataResponse EncryptData(EncryptionDataRequest request, IKeyContainer keys, IdentityScope identityScope)
+        internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope, DateTime now)
+        {
+            if (keys == null)
+            {
+                return EncryptionDataResponse.MakeError(EncryptionStatus.NotInitialized);
+            }
+            else if (!keys.IsValid(now))
+            {
+                return EncryptionDataResponse.MakeError(EncryptionStatus.KeysNotSynced);
+            }
+
+
+            if (!keys.TryGetMasterKey(now, out var masterKey))
+            {
+                return EncryptionDataResponse.MakeError(EncryptionStatus.NotAuthorizedForMasterKey);
+            }
+
+            if (!keys.TryGetDefaultKey(now, out var defaultKey))
+            {
+                return EncryptionDataResponse.MakeError(EncryptionStatus.NotAuthorizedForKey);
+            }
+
+            var expiry = now.AddSeconds(keys.TokenExpirySeconds);
+            var encryptParams = UID2TokenGenerator.DefaultParams.WithTokenExpiry(expiry);
+
+            try
+            {
+                string advertisingToken = (identityScope == IdentityScope.UID2) ? UID2TokenGenerator.GenerateUid2TokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams) :
+                    UID2TokenGenerator.GenerateEuidTokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams);
+                return EncryptionDataResponse.MakeSuccess(advertisingToken);
+            }
+            catch (Exception)
+            {
+                return EncryptionDataResponse.MakeError(EncryptionStatus.EncryptionFailure);
+            }
+        }
+
+
+        internal static EncryptionDataResponse EncryptData(EncryptionDataRequest request, KeyContainer keys, IdentityScope identityScope)
         {
             if (request.Data == null)
             {
@@ -261,7 +298,7 @@ namespace UID2.Client
             }
         }
 
-        internal static DecryptionDataResponse DecryptData(byte[] encryptedBytes, IKeyContainer keys, IdentityScope identityScope)
+        internal static DecryptionDataResponse DecryptData(byte[] encryptedBytes, KeyContainer keys, IdentityScope identityScope)
         {
             if ((encryptedBytes[0] & 224) == (int)PayloadType.ENCRYPTED_DATA_V3)
             {
@@ -273,7 +310,7 @@ namespace UID2.Client
             }
         }
 
-        internal static DecryptionDataResponse DecryptDataV2(byte[] encryptedBytes, IKeyContainer keys)
+        internal static DecryptionDataResponse DecryptDataV2(byte[] encryptedBytes, KeyContainer keys)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedBytes));
             if (reader.ReadByte() != (byte)PayloadType.ENCRYPTED_DATA)
@@ -300,7 +337,7 @@ namespace UID2.Client
             return DecryptionDataResponse.MakeSuccess(decryptedData, encryptedAt);
         }
 
-        internal static DecryptionDataResponse DecryptDataV3(byte[] encryptedBytes, IKeyContainer keys, IdentityScope identityScope)
+        internal static DecryptionDataResponse DecryptDataV3(byte[] encryptedBytes, KeyContainer keys, IdentityScope identityScope)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedBytes));
             var payloadScope = DecodeIdentityScopeV3(reader.ReadByte());

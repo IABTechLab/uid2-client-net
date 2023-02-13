@@ -4,6 +4,7 @@
     {
         Success,
         NotAuthorizedForKey,
+        NotAuthorizedForMasterKey,
         NotInitialized,
         KeysNotSynced,
         TokenDecryptFailure,

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using UID2.Client.Test.Utils;
+using System.Net.Sockets;
 using UID2.Client.Utils;
 using Xunit;
 
@@ -8,10 +8,10 @@ namespace UID2.Client.Test
 {
     public class EncryptionTestsV3
     {
-        private static readonly long MASTER_KEY_ID = 164;
-        private static readonly long SITE_KEY_ID = 165;
-        private static readonly int SITE_ID = 9000;
-        private static readonly int SITE_ID2 = 2;
+        const long MASTER_KEY_ID = 164;
+        const long SITE_KEY_ID = 165;
+        const int SITE_ID = 9000;
+        const int SITE_ID2 = 2;
         private static readonly byte[] MASTER_SECRET = { 139, 37, 241, 173, 18, 92, 36, 232, 165, 168, 23, 18, 38, 195, 123, 92, 160, 136, 185, 40, 91, 173, 165, 221, 168, 16, 169, 164, 38, 139, 8, 155 };
         private static readonly byte[] SITE_SECRET = { 32, 251, 7, 194, 132, 154, 250, 86, 202, 116, 104, 29, 131, 192, 139, 215, 48, 164, 11, 65, 226, 110, 167, 14, 108, 51, 254, 125, 65, 24, 23, 133 };
         private static readonly DateTime NOW = DateTime.UtcNow;
@@ -31,6 +31,154 @@ namespace UID2.Client.Test
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
         }
+
+        //////////////////////  Sharing tests
+        [Fact]
+        public void CanEncryptAndDecryptForSharing()
+        {
+            var client = new UID2Client("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
+            var json = KeySetToJsonForSharing(MASTER_KEY, SITE_KEY);
+            var refreshResult = client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            var encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+            string advertisingToken = encrypted.EncryptedData;
+
+            var res = client.Decrypt(advertisingToken, NOW);
+            Assert.True(res.Success);
+            Assert.Equal(EXAMPLE_UID, res.Uid);
+        }
+        /*
+        [Fact]
+        public void EncryptKeyExpired()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, key));
+            var encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status); //note: KeyInactive was the result for EncryptData, because that method allowed you to pass an expired key. In the Sharing scenario, expired and inactive keys are ignored when encrypting.
+        }
+
+        [Fact]
+        public void EncryptTokenDecryptKeyExpired()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            //var key = Key.CreateKeysetKey(SITE_KEY_ID, 99999, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
+            Key key = new Key(SITE_KEY_ID, SITE_ID2, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, key));
+            string advertisingToken = UID2TokenGenerator.GenerateUID2TokenV3(EXAMPLE_UID, MASTER_KEY, SITE_ID, key);
+            var encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptKeyInactive()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddDays(1), NOW.AddDays(2), MakeTestSecret(9));
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, key));
+            var encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptKeyExpiredCustomNow()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, SITE_KEY));
+            var encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptKeyInactiveCustomNow()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, SITE_KEY));
+            var encrypted = client.Encrypt(EXAMPLE_UID, SITE_KEY.Activates.AddSeconds(-1));
+            Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptNoSiteKey()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY));
+            var encrypted = client.Encrypt(EXAMPLE_UID); //todo - should be siteid 205 , or something else with no access?
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptSiteKeyExpired()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, key));
+            var encrypted = client.Encrypt(EXAMPLE_UID); //TODO siteid = key.SiteId
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptSiteKeyInactive()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddDays(1), NOW.AddDays(2), MakeTestSecret(9));
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, key));
+            var encrypted = client.Encrypt(EXAMPLE_UID); //TODO siteid = key.SiteId
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptSiteKeyInactiveCustomNow()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, SITE_KEY));
+            var encrypted = client.Encrypt(EXAMPLE_UID, SITE_KEY.Activates.AddSeconds(-1));//TODO siteid = SITE_KEY.SiteId
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptTokenExpired()
+        {
+            var expiry = NOW.AddSeconds(-60);
+            var encryptParams = UID2TokenGenerator.DefaultParams.WithTokenExpiry(expiry);
+
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            client.RefreshJson(KeySetToJsonForSharing(MASTER_KEY, SITE_KEY));
+            var advertisingToken = UID2TokenGenerator.GenerateUID2TokenV3(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
+            var encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);
+
+            var now = DateTimeUtils.FromEpochMilliseconds(DateTimeUtils.DateTimeToEpochMilliseconds(expiry.AddSeconds(-1)));
+            encrypted = client.Encrypt(EXAMPLE_UID);
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+            var decrypted = client.Decrypt(encrypted.EncryptedData);
+            Assert.Equal(DecryptionStatus.Success, decrypted.Status);
+            Assert.Equal(EXAMPLE_UID, decrypted.Uid);
+            Assert.Equal(now, decrypted.Established);
+        }
+        */
+        private static string KeySetToJsonForSharing(params Key[] keys)
+        {
+            return $@"{{
+            ""body"": {{
+                ""caller_site_id"": {SITE_ID},
+                ""master_keyset_id"": 1,
+                ""default_keyset_id"": 99999,
+                ""keys"": [" + string.Join(",", keys.Select(k => $@"{{
+                    ""id"": {k.Id},
+                    ""keyset_id"": {k.SiteId switch { -1 => 1, SITE_ID => 99999, _ => k.SiteId }},
+                    ""created"": {DateTimeUtils.DateTimeToEpochSeconds(k.Created)},
+                    ""activates"": {DateTimeUtils.DateTimeToEpochSeconds(k.Activates)},
+                    ""expires"": {DateTimeUtils.DateTimeToEpochSeconds(k.Expires)},
+                    ""secret"": ""{Convert.ToBase64String(k.Secret)}"" }}")) +
+                @"] }}";
+        }
+        
+        /////////////////////////////////////////////////////////////////////////////////////////////// End Sharing Tests
+
+
 
         [Fact]
         public void EmptyKeyContainer()
@@ -68,7 +216,7 @@ namespace UID2.Client.Test
             client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
             var res = client.Decrypt(advertisingToken, NOW);
-            Assert.Equal(DecryptionStatus.NotAuthorizedForKey, res.Status);
+            Assert.Equal(DecryptionStatus.NotAuthorizedForMasterKey, res.Status);
         }
 
         [Fact]
@@ -370,6 +518,7 @@ namespace UID2.Client.Test
             var decrypted = client.DecryptData(encrypted.EncryptedData);
             Assert.Equal(DecryptionStatus.NotAuthorizedForKey, decrypted.Status);
         }
+
 
         private static string KeySetToJson(params Key[] keys)
         {

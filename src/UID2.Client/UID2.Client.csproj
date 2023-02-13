@@ -18,8 +18,8 @@
 
   <ItemGroup>
     <PackageReference Include="BouncyCastle" Version="[1.7.0,2.0.0)" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.26.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.26.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using UID2.Client.Test.Utils;
 using UID2.Client.Utils;
 using Xunit;
 
@@ -67,7 +66,7 @@ namespace UID2.Client.Test
             client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
             var res = client.Decrypt(advertisingToken, NOW);
-            Assert.Equal(DecryptionStatus.NotAuthorizedForKey, res.Status);
+            Assert.Equal(DecryptionStatus.NotAuthorizedForMasterKey, res.Status);
         }
 
         [Fact]

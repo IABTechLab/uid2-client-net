@@ -25,13 +25,25 @@ namespace UID2.Client.Test
         // unit tests to ensure the base64url encoding and decoding are identical in all supported
         // uid2 client sdks in different programming languages
         [Fact]
-        public void crossPlatformConsistencyCheck_Base64UrlTest()
+        public void crossPlatformConsistencyCheck_Base64UrlTestCases()
         {
-            byte[] rawInput = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99, 0x99 };
+            byte[] case1 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99, 0x99 };
+            //the Base64 equivalent is "/+CI/+6ZmQ=="
+            //and we want the Base64URL encoded to remove 2 '=' paddings at the back
+            crossPlatformConsistencyCheck_Base64UrlTest(case1, "_-CI_-6ZmQ");
 
-            //the Base64 equivalent is "/+CI/+6ZmQ==" 
-            //and we want the Base64URL encoded to remove the '=' padding
-            string expectedBase64URLStr = "_-CI_-6ZmQ";
+            //the Base64 equivalent is "/+CI/+6ZmZk=" to remove 1 padding
+            byte[] case2 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99, 0x99, 0x99};
+            crossPlatformConsistencyCheck_Base64UrlTest(case2, "_-CI_-6ZmZk");
+
+            //the Base64 equivalent is "/+CI/+6Z" which requires no padding removal
+            byte[] case3 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99};
+            crossPlatformConsistencyCheck_Base64UrlTest(case3, "_-CI_-6Z");
+
+        }
+        
+        public void crossPlatformConsistencyCheck_Base64UrlTest(byte[] rawInput, String expectedBase64URLStr)
+        {
             var stream = new MemoryStream();
             var writer = new BigEndianByteWriter(stream);
             for (int i = 0; i < rawInput.Length; i++)

@@ -5,7 +5,7 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using UID2.Client;
+
 
 namespace UID2.Client.Utils
 {
@@ -80,7 +80,7 @@ namespace UID2.Client.Utils
         {
             return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
-        
+
         public static string GenerateEuidTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
         {
             var param = new Params()
@@ -90,13 +90,11 @@ namespace UID2.Client.Utils
             return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V3);
         }
         
-        public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey)
+        public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            var param = new Params()
-            {
-                IdentityScope = (int) IdentityScope.EUID
-            };
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V4);
+            encryptParams.IdentityScope = (int)IdentityScope.EUID;
+
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
 
         /// <summary>

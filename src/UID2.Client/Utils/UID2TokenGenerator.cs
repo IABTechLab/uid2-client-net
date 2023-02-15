@@ -47,7 +47,7 @@ namespace UID2.Client.Utils
             identityWriter.Write(uidBytes.Length);
             identityWriter.Write(uidBytes);
             identityWriter.Write(0);
-            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow.AddHours(-1)));
+            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow));
             byte[] identityIv = new byte[16];
             ThreadSafeRandom.PerThread.NextBytes(identityIv);
             byte[] encryptedIdentity = Encrypt(identityStream.ToArray(), identityIv, siteKey.Secret);
@@ -120,7 +120,7 @@ namespace UID2.Client.Utils
 
             // user identity data
             sitePayloadWriter.Write(0); // privacy bits
-            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow.AddHours(-1))); // established
+            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // established
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // last refreshed
             sitePayloadWriter.Write(Convert.FromBase64String(uid));
 

@@ -22,22 +22,28 @@ namespace UID2.Client
         /// </summary>
         /// <param name="json"></param>
         /// <returns>a response indicating if the refresh is successful</returns>
+        [Obsolete("Please use Refresh() instead.")]
         RefreshResponse RefreshJson(string json);
 
-        Task<RefreshResponse> RefreshAsync(CancellationToken token);
+        Task<RefreshResponse> RefreshAsync(CancellationToken token = default);
 
         /// <summary>
         /// Decrypt advertising token to extract UID2 details.
         /// </summary>
         /// <param name="token">The UID2 Token </param>
-        /// <param name="now">At what time this token is being decrypted</param>
+        /// <param name="now">At what UTC time this token is being decrypted</param>
         /// <returns>Response showing if decryption is successful and the resulting UID if successful.
         /// Or it could return error codes/string indicating what went wrong
         /// </returns>
-        DecryptionResponse Decrypt(string token, DateTime now);
+        [Obsolete("Please use Decrypt(string token) instead.")] 
+        DecryptionResponse Decrypt(string token, DateTime utcNow);
+        DecryptionResponse Decrypt(string token);
 
+        EncryptionDataResponse Encrypt(string rawUid);
+        [Obsolete("Please use Encrypt(string rawUid) instead.")]
         EncryptionDataResponse EncryptData(EncryptionDataRequest request);
 
+        [Obsolete("Please use Decrypt(string token) instead.")]
         DecryptionDataResponse DecryptData(string encryptedData);
     }
 

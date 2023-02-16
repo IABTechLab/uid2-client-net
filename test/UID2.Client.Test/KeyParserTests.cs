@@ -51,6 +51,62 @@ namespace UID2.Client.Test
         }
 
         [Fact]
+        public void ParseKeyListSharingEndpoint()
+        {
+            var s =
+                @"{""body"": {
+                   ""caller_site_id"": 11,
+                    ""master_keyset_id"": 1,
+                    ""default_keyset_id"": 99999,
+                    ""token_expiry_seconds"": 1728000,
+                    ""keys"": [
+                    {
+                        ""id"": 3,
+                        ""keyset_id"": 99999,
+                        ""created"": 1609459200,
+                        ""activates"": 1609459210,
+                        ""expires"": 1893456000,
+                        ""secret"": ""o8HsvkwJ5Ulnrd0uui3GpukpwDapj+JLqb7qfN/GJKo=""
+                    },
+                    {
+                        ""id"": 2,
+                        ""keyset_id"": 1,
+                        ""created"": 1609458200,
+                        ""activates"": 1609459220,
+                        ""expires"": 1893457000,
+                        ""secret"": ""DD67xF8OFmbJ1/lMPQ6fGRDbJOT4kXErrYWcKdFfCUE=""
+                    }],
+                },
+            ""status"": ""success""}";
+
+            var keyContainer = KeyParser.Parse(s);
+
+            Key key;
+
+            Assert.Equal(11, keyContainer.CallerSiteId);
+            Assert.True(keyContainer.TryGetMasterKey(DateTime.UtcNow, out var masterKey));
+            Assert.Equal(2, masterKey.Id);
+            Assert.True(keyContainer.TryGetDefaultKey(DateTime.UtcNow, out var defaultKey));
+            Assert.Equal(3, defaultKey.Id);
+            Assert.Equal(1728000, keyContainer.TokenExpirySeconds);
+
+            Assert.True(keyContainer.TryGetKey(3, out key));
+            Assert.Equal(99999, key.KeysetId);
+            Assert.Equal(DateTimeUtils.FromEpochSeconds(1609459200), key.Created);
+            Assert.Equal(DateTimeUtils.FromEpochSeconds(1609459210), key.Activates);
+            Assert.Equal(DateTimeUtils.FromEpochSeconds(1893456000), key.Expires);
+            Assert.Equal("o8HsvkwJ5Ulnrd0uui3GpukpwDapj+JLqb7qfN/GJKo=", Convert.ToBase64String(key.Secret));
+
+            Assert.True(keyContainer.TryGetKey(2, out key));
+            Assert.Equal(1, key.KeysetId);
+            Assert.Equal(DateTimeUtils.FromEpochSeconds(1609458200), key.Created);
+            Assert.Equal(DateTimeUtils.FromEpochSeconds(1609459220), key.Activates);
+            Assert.Equal(DateTimeUtils.FromEpochSeconds(1893457000), key.Expires);
+            Assert.Equal("DD67xF8OFmbJ1/lMPQ6fGRDbJOT4kXErrYWcKdFfCUE=", Convert.ToBase64String(key.Secret));
+        }
+
+
+        [Fact]
         public void ParseErrorKeyList()
         {
             Assert.ThrowsAny<Exception>(() => KeyParser.Parse(@"{""status"": ""error""}"));

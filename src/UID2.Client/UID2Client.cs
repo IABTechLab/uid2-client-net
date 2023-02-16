@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Reflection; //Assembly.GetEntryAssembly()
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,7 +31,12 @@ namespace UID2.Client
             _secretKey = Convert.FromBase64String(secretKey);
             _identityScope = identityScope;
         }
-        
+
+        public DecryptionResponse Decrypt(string token)
+        {
+            return Decrypt(token, DateTime.UtcNow);
+        }
+
         public DecryptionResponse Decrypt(string token, DateTime now)
         {
             var container = Volatile.Read(ref _container);
@@ -53,6 +59,17 @@ namespace UID2.Client
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
         }
+
+        public EncryptionDataResponse Encrypt(string rawUid)
+        {
+            return Encrypt(rawUid, DateTime.UtcNow);
+        }
+
+        internal EncryptionDataResponse Encrypt(string rawUid, DateTime now)
+        {
+            return UID2Encryption.Encrypt(rawUid, Volatile.Read(ref _container), _identityScope, now);
+        }
+
 
         public EncryptionDataResponse EncryptData(EncryptionDataRequest request)
         {
@@ -105,10 +122,16 @@ namespace UID2.Client
             return await RefreshInternal(token).ConfigureAwait(false);
         }
 
+        private string GetAssemblyNameAndVersion()
+        {
+            return "uid-client-net-" + Assembly.GetEntryAssembly().GetName().Version.ToString();
+        }
+
         private async Task<RefreshResponse> RefreshInternal(CancellationToken token)
         {
-            var request = new HttpRequestMessage(RefreshHttpMethod, _endpoint + "/v2/key/latest");
+            var request = new HttpRequestMessage(RefreshHttpMethod, _endpoint + "/v2/key/sharing");
             request.Headers.Add("Authorization", $"Bearer {_authKey}");
+            request.Headers.Add("X-UID2-Client-Version", $"{GetAssemblyNameAndVersion()}");
             HttpStatusCode? statusCode = null;
             try
             {

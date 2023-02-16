@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using UID2.Client.Test.Utils;
+using System.Net.Sockets;
 using UID2.Client.Utils;
 using Xunit;
 
@@ -8,10 +8,10 @@ namespace UID2.Client.Test
 {
     public class EncryptionTestsV3
     {
-        private static readonly long MASTER_KEY_ID = 164;
-        private static readonly long SITE_KEY_ID = 165;
-        private static readonly int SITE_ID = 9000;
-        private static readonly int SITE_ID2 = 2;
+        const long MASTER_KEY_ID = 164;
+        const long SITE_KEY_ID = 165;
+        const int SITE_ID = 9000;
+        const int SITE_ID2 = 2;
         private static readonly byte[] MASTER_SECRET = { 139, 37, 241, 173, 18, 92, 36, 232, 165, 168, 23, 18, 38, 195, 123, 92, 160, 136, 185, 40, 91, 173, 165, 221, 168, 16, 169, 164, 38, 139, 8, 155 };
         private static readonly byte[] SITE_SECRET = { 32, 251, 7, 194, 132, 154, 250, 86, 202, 116, 104, 29, 131, 192, 139, 215, 48, 164, 11, 65, 226, 110, 167, 14, 108, 51, 254, 125, 65, 24, 23, 133 };
         private static readonly DateTime NOW = DateTime.UtcNow;
@@ -31,6 +31,7 @@ namespace UID2.Client.Test
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
         }
+
 
         [Fact]
         public void EmptyKeyContainer()
@@ -68,7 +69,7 @@ namespace UID2.Client.Test
             client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
             var res = client.Decrypt(advertisingToken, NOW);
-            Assert.Equal(DecryptionStatus.NotAuthorizedForKey, res.Status);
+            Assert.Equal(DecryptionStatus.NotAuthorizedForMasterKey, res.Status);
         }
 
         [Fact]
@@ -370,6 +371,7 @@ namespace UID2.Client.Test
             var decrypted = client.DecryptData(encrypted.EncryptedData);
             Assert.Equal(DecryptionStatus.NotAuthorizedForKey, decrypted.Status);
         }
+
 
         private static string KeySetToJson(params Key[] keys)
         {

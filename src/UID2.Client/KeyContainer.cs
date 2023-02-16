@@ -4,14 +4,21 @@ using UID2.Client.Utils;
 
 namespace UID2.Client
 {
-    internal class KeyContainer : IKeyContainer
+    internal class KeyContainer
     {
         private readonly Dictionary<long, Key> _keys;
-        private readonly Dictionary<int, List<Key>> _keysBySite = new Dictionary<int, List<Key>>();
         private readonly DateTime _latestKeyExpiry = DateTime.MinValue;
 
+        private readonly Dictionary<int, List<Key>> _keysBySite = new Dictionary<int, List<Key>>(); //for legacy /key/latest
+
+        private readonly Dictionary<int, List<Key>> _keysByKeyset = new Dictionary<int, List<Key>>();
+        private readonly int _callerSiteId;
+        private readonly int _masterKeysetId;
+        private readonly int _defaultKeysetId;
+        private readonly long _tokenExpirySeconds;
+
         internal KeyContainer(List<Key> keys)
-        {
+        {   //legacy /key/latest
             _keys = new Dictionary<long, Key>(keys.Count);
             foreach (var key in keys)
             {
@@ -38,6 +45,40 @@ namespace UID2.Client
             }
         }
 
+        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys)
+        {   //key/sharing
+            _callerSiteId = callerSiteId;
+            _masterKeysetId = masterKeysetId;
+            _defaultKeysetId = defaultKeysetId;
+            _tokenExpirySeconds = tokenExpirySeconds;
+
+
+            _keys = new Dictionary<long, Key>(keys.Count);
+            foreach (var key in keys)
+            {
+                _keys.Add(key.Id, key);
+                if (key.KeysetId > 0)
+                {
+                    if (!_keysByKeyset.TryGetValue(key.KeysetId, out var keysetKeys))
+                    {
+                        keysetKeys = new List<Key>();
+                        _keysByKeyset.Add(key.KeysetId, keysetKeys);
+                    }
+                    keysetKeys.Add(key);
+                }
+
+                if (key.Expires > _latestKeyExpiry)
+                {
+                    _latestKeyExpiry = key.Expires;
+                }
+            }
+
+            foreach (var kv in _keysByKeyset)
+            {
+                kv.Value.Sort((Key a, Key b) => a.Activates.CompareTo(b.Activates));
+            }
+        }
+
         public bool IsValid(DateTime asOf)
         {
             return asOf < _latestKeyExpiry;
@@ -53,19 +94,34 @@ namespace UID2.Client
             return false;
         }
 
-        public bool TryGetActiveSiteKey(int siteId, DateTime now, out Key key)
+        public bool TryGetDefaultKey(DateTime now, out Key key)
         {
-            if (!_keysBySite.TryGetValue(siteId, out var siteKeys) || siteKeys.Count == 0)
+            return TryGetKeysetActiveKey(_defaultKeysetId, now, out key);
+        }
+
+        public bool TryGetMasterKey(DateTime now, out Key key)
+        {
+            return TryGetKeysetActiveKey(_masterKeysetId, now, out key);
+        }
+
+        private bool TryGetKeysetActiveKey(int keysetId, DateTime now, out Key key)
+        {
+            if (!_keysByKeyset.TryGetValue(keysetId, out var keyset) || keyset.Count == 0)
             {
                 key = null;
                 return false;
             }
 
-            int it = ListUtils.UpperBound(siteKeys, now, (DateTime ts, Key k) => ts < k.Activates);
+            return TryGetLatestKey(keyset, now, out key);
+        }
+
+        private bool TryGetLatestKey(List<Key> keys, DateTime now, out Key key)
+        {
+            int it = ListUtils.UpperBound(keys, now, (DateTime ts, Key k) => ts < k.Activates);
             while (it > 0)
             {
                 --it;
-                key = siteKeys[it];
+                key = keys[it];
                 if (key.IsActive(now))
                 {
                     return true;
@@ -75,5 +131,20 @@ namespace UID2.Client
             key = null;
             return false;
         }
+    
+        public bool TryGetActiveSiteKey(int siteId, DateTime now, out Key key)
+        {
+            if (!_keysBySite.TryGetValue(siteId, out var siteKeys) || siteKeys.Count == 0)
+            {
+                key = null;
+                return false;
+            }
+
+            return TryGetLatestKey(siteKeys, now, out key);
+        }
+
+        public int CallerSiteId => _callerSiteId;
+        public long TokenExpirySeconds => _tokenExpirySeconds;
+
     }
 }

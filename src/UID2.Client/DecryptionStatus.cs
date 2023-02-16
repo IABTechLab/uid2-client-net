@@ -3,6 +3,7 @@
     public enum DecryptionStatus
     {
         Success,
+        NotAuthorizedForMasterKey,
         NotAuthorizedForKey,
         NotInitialized,
         InvalidPayload,

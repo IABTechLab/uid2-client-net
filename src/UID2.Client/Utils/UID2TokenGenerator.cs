@@ -5,16 +5,10 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
-using UID2.Client.Utils;
 
-namespace UID2.Client.Test.Utils
+
+namespace UID2.Client.Utils
 {
-    /// <summary>
-    /// Utility class to generate UID2 Token, this should be used for testing
-    /// bid request handling logic to ensure it could decrypt the raw UID2 from the UID2 Token provided
-    /// by SSPs/publishers. Production system should not need this.
-    /// </summary>
     public static class UID2TokenGenerator
     {
         public class Params
@@ -25,7 +19,6 @@ namespace UID2.Client.Test.Utils
             public Params WithTokenExpiry(DateTime expiry) { TokenExpiry = expiry; return this; }
 
             public int IdentityScope = (int)UID2.Client.IdentityScope.UID2;
-            public int IdentityType = (int)UID2.Client.IdentityType.Email;
         }
 
         public static Params DefaultParams => new Params();
@@ -53,7 +46,7 @@ namespace UID2.Client.Test.Utils
             identityWriter.Write(uidBytes.Length);
             identityWriter.Write(uidBytes);
             identityWriter.Write(0);
-            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow.AddHours(-1)));
+            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow));
             byte[] identityIv = new byte[16];
             ThreadSafeRandom.PerThread.NextBytes(identityIv);
             byte[] encryptedIdentity = Encrypt(identityStream.ToArray(), identityIv, siteKey.Secret);
@@ -86,7 +79,7 @@ namespace UID2.Client.Test.Utils
         {
             return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
-        
+
         public static string GenerateEuidTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
         {
             var param = new Params()
@@ -96,13 +89,11 @@ namespace UID2.Client.Test.Utils
             return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V3);
         }
         
-        public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey)
+        public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            var param = new Params()
-            {
-                IdentityScope = (int) IdentityScope.EUID
-            };
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V4);
+            encryptParams.IdentityScope = (int)IdentityScope.EUID;
+
+            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
 
         /// <summary>
@@ -128,7 +119,7 @@ namespace UID2.Client.Test.Utils
 
             // user identity data
             sitePayloadWriter.Write(0); // privacy bits
-            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow.AddHours(-1))); // established
+            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // established
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // last refreshed
             sitePayloadWriter.Write(Convert.FromBase64String(uid));
 
@@ -151,7 +142,10 @@ namespace UID2.Client.Test.Utils
 
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
-            rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
+            var firstChar = uid.Substring(0, 1);
+            var identityType = (firstChar == "F" || firstChar == "B") ? IdentityType.Phone : IdentityType.Email; //see UID2-79+Token+and+ID+format+v3
+
+            rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | ((int)identityType << 2)));
             rootStreamWriter.Write((byte)adTokenVersion);
             rootStreamWriter.Write((int)masterKey.Id);
 

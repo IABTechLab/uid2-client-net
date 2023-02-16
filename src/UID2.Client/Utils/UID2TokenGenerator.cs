@@ -19,7 +19,6 @@ namespace UID2.Client.Utils
             public Params WithTokenExpiry(DateTime expiry) { TokenExpiry = expiry; return this; }
 
             public int IdentityScope = (int)UID2.Client.IdentityScope.UID2;
-            public int IdentityType = (int)UID2.Client.IdentityType.Email;
         }
 
         public static Params DefaultParams => new Params();
@@ -143,7 +142,10 @@ namespace UID2.Client.Utils
 
             var rootStream = new MemoryStream();
             var rootStreamWriter = new BigEndianByteWriter(rootStream);
-            rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | (encryptParams.IdentityType << 2)));
+            var firstChar = uid.Substring(0, 1);
+            var identityType = (firstChar == "F" || firstChar == "B") ? IdentityType.Phone : IdentityType.Email; //see UID2-79+Token+and+ID+format+v3
+
+            rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | ((int)identityType << 2)));
             rootStreamWriter.Write((byte)adTokenVersion);
             rootStreamWriter.Write((int)masterKey.Id);
 

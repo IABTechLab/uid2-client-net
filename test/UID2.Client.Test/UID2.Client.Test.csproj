@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\UID2.Client\UID2.Client.csproj" />
+    <ProjectReference Include="..\..\test\UID2.Client.Test.Utils\UID2.Client.Test.Utils.csproj" />
   </ItemGroup>
 
 </Project>

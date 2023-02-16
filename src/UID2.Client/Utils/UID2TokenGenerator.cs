@@ -19,7 +19,6 @@ namespace UID2.Client.Utils
             public Params WithTokenExpiry(DateTime expiry) { TokenExpiry = expiry; return this; }
 
             public int IdentityScope = (int)UID2.Client.IdentityScope.UID2;
-            //public int IdentityType = (int)UID2.Client.IdentityType.Email;
         }
 
         public static Params DefaultParams => new Params();

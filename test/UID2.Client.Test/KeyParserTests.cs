@@ -84,9 +84,9 @@ namespace UID2.Client.Test
             Key key;
 
             Assert.Equal(11, keyContainer.CallerSiteId);
-            Assert.True(keyContainer.TryGetMasterKey(DateTime.Now, out var masterKey));
+            Assert.True(keyContainer.TryGetMasterKey(DateTime.UtcNow, out var masterKey));
             Assert.Equal(2, masterKey.Id);
-            Assert.True(keyContainer.TryGetDefaultKey(DateTime.Now, out var defaultKey));
+            Assert.True(keyContainer.TryGetDefaultKey(DateTime.UtcNow, out var defaultKey));
             Assert.Equal(3, defaultKey.Id);
             Assert.Equal(1728000, keyContainer.TokenExpirySeconds);
 

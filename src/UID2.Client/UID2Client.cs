@@ -34,7 +34,7 @@ namespace UID2.Client
 
         public DecryptionResponse Decrypt(string token)
         {
-            return Decrypt(token, DateTime.Now);
+            return Decrypt(token, DateTime.UtcNow);
         }
 
         public DecryptionResponse Decrypt(string token, DateTime now)
@@ -62,7 +62,7 @@ namespace UID2.Client
 
         public EncryptionDataResponse Encrypt(string rawUid)
         {
-            return Encrypt(rawUid, DateTime.Now);
+            return Encrypt(rawUid, DateTime.UtcNow);
         }
 
         internal EncryptionDataResponse Encrypt(string rawUid, DateTime now)

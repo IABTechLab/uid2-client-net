@@ -442,7 +442,7 @@ namespace UID2.Client.Test
             var refreshResult = client.RefreshJson(json);
             Assert.True(refreshResult.Success);
 
-            var encryptedAt = DateTime.Now;
+            var encryptedAt = DateTime.UtcNow;
             var encrypted = client.Encrypt(EXAMPLE_UID, encryptedAt);
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
 
@@ -450,7 +450,7 @@ namespace UID2.Client.Test
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
 
-            var futureDecryption = client.Decrypt(encrypted.EncryptedData, DateTime.Now.AddSeconds(3));
+            var futureDecryption = client.Decrypt(encrypted.EncryptedData, DateTime.UtcNow.AddSeconds(3));
             Assert.Equal(DecryptionStatus.ExpiredToken, futureDecryption.Status);
         }
 

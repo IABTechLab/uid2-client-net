@@ -379,6 +379,7 @@ namespace UID2.Client.Test
         {
             var encrypted = client.Encrypt(rawUid);
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+            Assert.Equal(rawUid, client.Decrypt(encrypted.EncryptedData).Uid);
 
             var firstChar = encrypted.EncryptedData.Substring(0, 1);
             if (firstChar == "A" || firstChar == "E") //from UID2-79+Token+and+ID+format+v3
@@ -517,6 +518,5 @@ namespace UID2.Client.Test
                         ""secret"": ""{Convert.ToBase64String(k.Secret)}"" }}")) +
                 @"] }}";
         }
-
     }
 }

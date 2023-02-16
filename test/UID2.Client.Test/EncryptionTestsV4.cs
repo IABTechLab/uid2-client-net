@@ -31,15 +31,15 @@ namespace UID2.Client.Test
             crossPlatformConsistencyCheck_Base64UrlTest(case1, "_-CI_-6ZmQ");
 
             //the Base64 equivalent is "/+CI/+6ZmZk=" to remove 1 padding
-            byte[] case2 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99, 0x99, 0x99};
+            byte[] case2 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99, 0x99, 0x99 };
             crossPlatformConsistencyCheck_Base64UrlTest(case2, "_-CI_-6ZmZk");
 
             //the Base64 equivalent is "/+CI/+6Z" which requires no padding removal
-            byte[] case3 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99};
+            byte[] case3 = { 0xff, 0xE0, 0x88, 0xFF, 0xEE, 0x99 };
             crossPlatformConsistencyCheck_Base64UrlTest(case3, "_-CI_-6Z");
 
         }
-        
+
         public void crossPlatformConsistencyCheck_Base64UrlTest(byte[] rawInput, String expectedBase64URLStr)
         {
             var stream = new MemoryStream();
@@ -192,7 +192,7 @@ namespace UID2.Client.Test
         [Fact]
         public void EncryptDataSiteIdFromToken()
         {
-            byte[] data = { 1, 2, 3, 4, 5, 6};
+            byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
@@ -202,11 +202,11 @@ namespace UID2.Client.Test
             Assert.Equal(DecryptionStatus.Success, decrypted.Status);
             Assert.Equal(data, decrypted.DecryptedData);
         }
-        
+
         [Fact]
         public void EncryptDataSiteIdFromTokenCustomSiteKeySiteId()
         {
-            byte[] data = {1, 2, 3, 4, 5, 6};
+            byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID2, SITE_KEY, UID2TokenGenerator.DefaultParams);
@@ -231,7 +231,7 @@ namespace UID2.Client.Test
         [Fact]
         public void EncryptDataTokenDecryptKeyExpired()
         {
-            byte[] data = { 1, 2, 3, 4, 5, 6};
+            byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             Key key = new Key(SITE_KEY_ID, SITE_ID2, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
             client.RefreshJson(KeySetToJson(MASTER_KEY, key));
@@ -246,7 +246,7 @@ namespace UID2.Client.Test
             var expiry = NOW.AddSeconds(-60);
             var encryptParams = UID2TokenGenerator.DefaultParams.WithTokenExpiry(expiry);
 
-            byte[] data = { 1, 2, 3, 4, 5, 6};
+            byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
@@ -358,6 +358,38 @@ namespace UID2.Client.Test
 
             Assert.Equal("E", advertisingToken.Substring(0, 1));
         }
+
+        [Fact]
+        public void RawUidProducesCorrectIdentityTypeInToken()
+        {
+            var client = new UID2Client("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
+            var json = KeySetToJsonForSharing(MASTER_KEY, SITE_KEY);
+            var refreshResult = client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            //see UID2-79+Token+and+ID+format+v3 . Also note EUID does not support v2 or phone
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=", client)); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
+            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ", client)); //v3 +12345678901
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=", client)); //v2 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", client)); //v3 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", client)); //v3 EUID test@example.com
+        }
+
+        private IdentityType GetTokenIdentityType(string rawUid, UID2Client client)
+        {
+            var encrypted = client.Encrypt(rawUid);
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+
+            var firstChar = encrypted.EncryptedData.Substring(0, 1);
+            if (firstChar == "A" || firstChar == "E") //from UID2-79+Token+and+ID+format+v3
+                return IdentityType.Email;
+            else if (firstChar == "F" || firstChar == "B")
+                return IdentityType.Phone;
+
+            throw new Exception("unknown IdentityType");
+        }
+
+
 
         [Fact]
         public void MultipleKeysPerKeyset()

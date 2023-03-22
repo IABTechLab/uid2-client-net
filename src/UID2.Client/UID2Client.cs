@@ -124,7 +124,8 @@ namespace UID2.Client
 
         private string GetAssemblyNameAndVersion()
         {
-            return "uid-client-net-" + Assembly.GetEntryAssembly().GetName().Version.ToString();
+            var version = "5.1.1";
+            return "uid-client-net-" + version;
         }
 
         private async Task<RefreshResponse> RefreshInternal(CancellationToken token)

@@ -124,7 +124,7 @@ namespace UID2.Client
 
         private string GetAssemblyNameAndVersion()
         {
-            var version = "5.1.1";
+            var version = "5.1.2";
             return "uid-client-net-" + version;
         }
 

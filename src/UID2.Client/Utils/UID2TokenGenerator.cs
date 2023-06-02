@@ -145,7 +145,7 @@ namespace UID2.Client.Utils
             var firstChar = uid.Substring(0, 1);
             var identityType = (firstChar == "F" || firstChar == "B") ? IdentityType.Phone : IdentityType.Email; //see UID2-79+Token+and+ID+format+v3
 
-            rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | ((int)identityType << 2)));
+            rootStreamWriter.Write((byte)((encryptParams.IdentityScope << 4) | ((int)identityType << 2) | 3));
             rootStreamWriter.Write((byte)adTokenVersion);
             rootStreamWriter.Write((int)masterKey.Id);
 

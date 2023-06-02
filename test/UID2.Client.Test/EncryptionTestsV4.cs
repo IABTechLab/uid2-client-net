@@ -40,7 +40,7 @@ namespace UID2.Client.Test
 
         }
 
-        public void crossPlatformConsistencyCheck_Base64UrlTest(byte[] rawInput, String expectedBase64URLStr)
+        public void crossPlatformConsistencyCheck_Base64UrlTest(byte[] rawInput, string expectedBase64URLStr)
         {
             var stream = new MemoryStream();
             var writer = new BigEndianByteWriter(stream);
@@ -65,7 +65,7 @@ namespace UID2.Client.Test
         [Fact]
         public void crossPlatformConsistencyCheck_Decrypt()
         {
-            String crossPlatformAdvertisingToken =
+            string crossPlatformAdvertisingToken =
                 "AIAAAACkOqJj9VoxXJNnuX3v-ymceRf8_Av0vA5asOj9YBZJc1kV1vHdmb0AIjlzWnFF-gxIlgXqhRFhPo3iXpugPBl3gv4GKnGkw-Zgm2QqMsDPPLpMCYiWrIUqHPm8hQiq9PuTU-Ba9xecRsSIAN0WCwKLwA_EDVdzmnLJu64dQoeYmuu3u1G2EuTkuMrevmP98tJqSUePKwnfK73-0Zdshw";
             //Sunday, 1 January 2023 1:01:01 AM UTC
             var referenceTimestampMs = 1672534861000L;
@@ -93,8 +93,8 @@ namespace UID2.Client.Test
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
 
             //verify that the dynamically created ad token can be decrypted
-            String runtimeAdvertisingToken =
-                UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, masterKey, SITE_ID, siteKey, encryptParams);
+            string runtimeAdvertisingToken =
+                GenerateUid2TokenV4(EXAMPLE_UID, masterKey, SITE_ID, siteKey, encryptParams);
             //best effort check as the token might simply just not require padding 
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('='));
 
@@ -107,6 +107,30 @@ namespace UID2.Client.Test
             res = client.Decrypt(crossPlatformAdvertisingToken, NOW);
             Assert.Equal(EXAMPLE_UID, res.Uid);
         }
+        
+        private static void ValidateAdvertisingToken(string advertisingTokenString, IdentityScope identityScope, IdentityType identityType) {
+            string firstChar = advertisingTokenString.Substring(0, 1);
+            if (identityScope == IdentityScope.UID2)
+                Assert.Equal(identityType == IdentityType.Email ? "A" : "B", firstChar);
+            else
+                Assert.Equal(identityType == IdentityType.Email ? "E" : "F", firstChar);
+
+            string secondChar = advertisingTokenString.Substring(1, 1);
+            Assert.Equal("4", secondChar);
+
+            //No URL-unfriendly characters allowed:
+            Assert.Equal(-1, advertisingTokenString.IndexOf('='));
+            Assert.Equal(-1, advertisingTokenString.IndexOf('+'));
+            Assert.Equal(-1, advertisingTokenString.IndexOf('/'));
+        }
+
+        private static string GenerateUid2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, UID2TokenGenerator.Params tokenGeneratorParams)
+        {
+            string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(uid, masterKey, siteId, siteKey, tokenGeneratorParams);
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            return advertisingToken;
+        }
+
 
         [Fact]
         public void SmokeTest()
@@ -114,7 +138,7 @@ namespace UID2.Client.Test
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
-            string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            string advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
@@ -124,7 +148,7 @@ namespace UID2.Client.Test
         public void EmptyKeyContainer()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            var advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.NotInitialized, res.Status);
@@ -134,7 +158,7 @@ namespace UID2.Client.Test
         public void ExpiredKeyContainer()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            var advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
 
             Key masterKeyExpired = new Key(MASTER_KEY_ID, -1, NOW, NOW.AddHours(-2), NOW.AddHours(-1), MASTER_SECRET);
             Key siteKeyExpired = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddHours(-2), NOW.AddHours(-1), SITE_SECRET);
@@ -149,7 +173,7 @@ namespace UID2.Client.Test
         public void NotAuthorizedForMasterKey()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            var advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
 
             Key anotherMasterKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
             Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1), SITE_SECRET);
@@ -163,7 +187,7 @@ namespace UID2.Client.Test
         public void InvalidPayload()
         {
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
-            byte[] payload = UID2Base64UrlCoder.Decode(UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams));
+            byte[] payload = UID2Base64UrlCoder.Decode(GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams));
             var advertisingToken = UID2Base64UrlCoder.Encode(payload.SkipLast(1).ToArray());
 
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
@@ -180,7 +204,7 @@ namespace UID2.Client.Test
 
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
+            var advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
 
             var res = client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);
@@ -195,7 +219,7 @@ namespace UID2.Client.Test
             byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            string advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
             var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
             var decrypted = client.DecryptData(encrypted.EncryptedData);
@@ -209,7 +233,7 @@ namespace UID2.Client.Test
             byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID2, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            string advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID2, SITE_KEY, UID2TokenGenerator.DefaultParams);
             var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
             var decrypted = client.DecryptData(encrypted.EncryptedData);
@@ -223,7 +247,7 @@ namespace UID2.Client.Test
             byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            var advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
             Assert.Throws<ArgumentException>(() =>
                 client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken).WithSiteId(SITE_KEY.SiteId)));
         }
@@ -235,7 +259,7 @@ namespace UID2.Client.Test
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             Key key = new Key(SITE_KEY_ID, SITE_ID2, NOW, NOW, NOW.AddDays(-1), MakeTestSecret(9));
             client.RefreshJson(KeySetToJson(MASTER_KEY, key));
-            string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, key, UID2TokenGenerator.DefaultParams);
+            string advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, key, UID2TokenGenerator.DefaultParams);
             var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
         }
@@ -249,7 +273,7 @@ namespace UID2.Client.Test
             byte[] data = { 1, 2, 3, 4, 5, 6 };
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
+            var advertisingToken = GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
             var encrypted = client.EncryptData(EncryptionDataRequest.ForData(data).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);
 

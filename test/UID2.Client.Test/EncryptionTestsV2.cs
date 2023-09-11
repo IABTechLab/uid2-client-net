@@ -12,14 +12,15 @@ namespace UID2.Client.Test
         private const int SiteId = 12345;
         private readonly UID2Client _client = new("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
 
+        private readonly AdvertisingTokenBuilder _tokenBuilder =
+            AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V2);
+
         [Fact]
         public void SmokeTest()
         {
             var refreshResult = _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
-            String advertisingToken =
-                UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
         }
@@ -29,10 +30,7 @@ namespace UID2.Client.Test
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var privacyBits = PrivacyBitsBuilder.Builder().WithOptedOut(true).Build();
-            var tokenGeneratorParams = UID2TokenGenerator.DefaultParams.WithPrivacyBits(privacyBits);
-            var advertisingToken =
-                UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY,
-                    tokenGeneratorParams);
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             var res = _client.Decrypt(advertisingToken, NOW);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.UserOptedOut, res.Status);
@@ -44,8 +42,7 @@ namespace UID2.Client.Test
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var privacyBits = PrivacyBitsBuilder.Builder().WithCstgDerived(true).Build();
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY,
-                UID2TokenGenerator.DefaultParams.WithPrivacyBits(privacyBits));
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             var res = _client.Decrypt(advertisingToken, NOW);
             Assert.True(res.IsCstgDerived);
             Assert.True(res.Success);
@@ -58,8 +55,7 @@ namespace UID2.Client.Test
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var privacyBits = PrivacyBitsBuilder.Builder().WithCstgDerived(false).Build();
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY,
-                UID2TokenGenerator.DefaultParams.WithPrivacyBits(privacyBits));
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             var res = _client.Decrypt(advertisingToken, NOW);
             Assert.False(res.IsCstgDerived);
             Assert.True(res.Success);
@@ -70,8 +66,7 @@ namespace UID2.Client.Test
         [Fact]
         public void EmptyKeyContainer()
         {
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.NotInitialized, res.Status);
         }
@@ -79,13 +74,11 @@ namespace UID2.Client.Test
         [Fact]
         public void ExpiredKeyContainer()
         {
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
-
             Key masterKeyExpired = new Key(MASTER_KEY_ID, -1, NOW, NOW.AddHours(-2), NOW.AddHours(-1), MASTER_SECRET);
             Key siteKeyExpired = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddHours(-2), NOW.AddHours(-1), SITE_SECRET);
             _client.RefreshJson(KeySetToJson(masterKeyExpired, siteKeyExpired));
 
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.KeysNotSynced, res.Status);
         }
@@ -93,24 +86,20 @@ namespace UID2.Client.Test
         [Fact]
         public void NotAuthorizedForKey()
         {
-            var advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
-
             Key anotherMasterKey =
                 new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
             Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1),
                 SITE_SECRET);
             _client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
             Assert.Equal(DecryptionStatus.NotAuthorizedForMasterKey, res.Status);
         }
 
         [Fact]
         public void InvalidPayload()
         {
-            byte[] payload =
-                Convert.FromBase64String(
-                    UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY));
+            byte[] payload = Convert.FromBase64String(_tokenBuilder.Build());
             var advertisingToken = Convert.ToBase64String(payload.SkipLast(1).ToArray());
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
@@ -123,11 +112,9 @@ namespace UID2.Client.Test
         public void TokenExpiryAndCustomNow()
         {
             var expiry = NOW.AddDays(-60);
-            var encryptParams = UID2TokenGenerator.DefaultParams.WithTokenExpiry(expiry);
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken =
-                UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, encryptParams);
+            var advertisingToken = _tokenBuilder.withExpiry(expiry).Build();;
 
             var res = _client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);

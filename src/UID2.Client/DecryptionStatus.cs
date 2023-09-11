@@ -12,5 +12,6 @@
         VersionNotSupported,
         InvalidPayloadType,
         InvalidIdentityScope,
+        UserOptedOut
     }
 }

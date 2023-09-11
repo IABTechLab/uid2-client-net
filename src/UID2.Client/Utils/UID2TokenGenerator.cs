@@ -6,17 +6,22 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 
-
 namespace UID2.Client.Utils
 {
+    // AU: Since this is essentially test code, we should eventually move it into the test project and probably replace
+    // the confusing combo of "params builder-like + static function" to just be a regular UID2TokenBuilder that produces
+    // a string token on Build()
+    [Obsolete("This class shouldn't be used outside of the SDK and will be made internal in the future releases")]
     public static class UID2TokenGenerator
     {
         public class Params
         {
             public DateTime TokenExpiry = DateTime.UtcNow.AddHours(1);
+            public int PrivacyBits = 0;
 
             public Params() { }
             public Params WithTokenExpiry(DateTime expiry) { TokenExpiry = expiry; return this; }
+            public Params WithPrivacyBits(int privacyBits) { PrivacyBits = privacyBits; return this; }
 
             public int IdentityScope = (int)UID2.Client.IdentityScope.UID2;
         }
@@ -45,7 +50,7 @@ namespace UID2.Client.Utils
             identityWriter.Write(siteId);
             identityWriter.Write(uidBytes.Length);
             identityWriter.Write(uidBytes);
-            identityWriter.Write(0);
+            identityWriter.Write(encryptParams.PrivacyBits);
             identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow));
             byte[] identityIv = new byte[16];
             ThreadSafeRandom.PerThread.NextBytes(identityIv);
@@ -118,7 +123,7 @@ namespace UID2.Client.Utils
             sitePayloadWriter.Write(0); // client key id
 
             // user identity data
-            sitePayloadWriter.Write(0); // privacy bits
+            sitePayloadWriter.Write(encryptParams.PrivacyBits); // privacy bits
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // established
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // last refreshed
             sitePayloadWriter.Write(Convert.FromBase64String(uid));
@@ -158,10 +163,8 @@ namespace UID2.Client.Utils
             {
                 return UID2Base64UrlCoder.Encode(rootStream.ToArray());
             }
-            else
-            {
-                return Convert.ToBase64String(rootStream.ToArray());
-            }
+
+            return Convert.ToBase64String(rootStream.ToArray());
         }
 
 

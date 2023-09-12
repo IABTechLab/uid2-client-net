@@ -1,23 +1,24 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Specialized;
 
 namespace UID2.Client
 {
-    public class PrivacyBits
+    readonly struct PrivacyBits
     {
         // Bit 0 is legacy and is no longer in use
         private const int BitCstg = 1;
         private const int BitCstgOptOut = 2;
         
-        private readonly BitArray _bits;
+        private readonly BitVector32 _bits;
 
         public PrivacyBits(int bitsAsInt)
         {
-            _bits = new BitArray(new [] {bitsAsInt});
+            _bits = new BitVector32(bitsAsInt);
         }
 
-        public bool IsCstgDerived => _bits.Get(BitCstg);
+        public bool IsCstgDerived => !_bits[BitCstg];
 
-        public bool IsOptedOut => _bits.Get(BitCstgOptOut);
+        public bool IsOptedOut => !_bits[BitCstgOptOut];
     }
 }

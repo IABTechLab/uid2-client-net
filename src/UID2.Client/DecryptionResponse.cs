@@ -4,7 +4,7 @@ namespace UID2.Client
 {
     public readonly struct DecryptionResponse
     {
-        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId, int? siteKeySiteId, bool? isCstgDerived)
+        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId, int? siteKeySiteId, bool? isCstgDerived = false)
         {
             Status = status;
             Uid = uid;

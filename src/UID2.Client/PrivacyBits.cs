@@ -7,8 +7,8 @@ namespace UID2.Client
     readonly struct PrivacyBits
     {
         // Bit 0 is legacy and is no longer in use
-        private const int BitCstg = 1;
-        private const int BitCstgOptOut = 2;
+        private const int CstgMask = 2;
+        private const int CstgOptOutMask = 4;
         
         private readonly BitVector32 _bits;
 
@@ -17,8 +17,9 @@ namespace UID2.Client
             _bits = new BitVector32(bitsAsInt);
         }
 
-        public bool IsCstgDerived => !_bits[BitCstg];
+        // `_bits[x]` applies bit mask x to _bits, this is not indexing 
+        public bool IsCstgDerived => _bits[CstgMask];
 
-        public bool IsOptedOut => !_bits[BitCstgOptOut];
+        public bool IsOptedOut => _bits[CstgOptOutMask];
     }
 }

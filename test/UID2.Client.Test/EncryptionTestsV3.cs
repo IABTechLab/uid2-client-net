@@ -10,9 +10,7 @@ namespace UID2.Client.Test
     public class EncryptionTestsV3
     {
         private readonly UID2Client _client = new("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
-
-        private readonly AdvertisingTokenBuilder _tokenBuilder =
-            AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V3);
+        private readonly AdvertisingTokenBuilder _tokenBuilder = AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V3);
 
         [Fact]
         public void SmokeTest()
@@ -85,10 +83,8 @@ namespace UID2.Client.Test
         [Fact]
         public void NotAuthorizedForKey()
         {
-            Key anotherMasterKey =
-                new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
-            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1),
-                SITE_SECRET);
+            Key anotherMasterKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
+            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1), SITE_SECRET);
             _client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
             var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
@@ -126,9 +122,7 @@ namespace UID2.Client.Test
         public void EncryptDataSpecificKeyAndIv()
         {
             byte[] iv = new byte[12];
-            var encrypted =
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithKey(SITE_KEY)
-                    .WithInitializationVector(iv));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithKey(SITE_KEY).WithInitializationVector(iv));
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
             _client.RefreshJson(KeySetToJson(SITE_KEY));
             var decrypted = _client.DecryptData(encrypted.EncryptedData);
@@ -175,9 +169,7 @@ namespace UID2.Client.Test
         public void EncryptDataSiteIdFromTokenCustomSiteKeySiteId()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var encrypted =
-                _client.EncryptData(
-                    EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()));
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
             var decrypted = _client.DecryptData(encrypted.EncryptedData);
             Assert.Equal(DecryptionStatus.Success, decrypted.Status);
@@ -197,8 +189,7 @@ namespace UID2.Client.Test
         public void EncryptDataTokenDecryptFailed()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var encrypted =
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken("bogus-token"));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken("bogus-token"));
             Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);
         }
 
@@ -217,8 +208,7 @@ namespace UID2.Client.Test
             Key key = new Key(SITE_KEY_ID, SITE_ID2, NOW, NOW, YESTERDAY, TEST_SECRET);
             _client.RefreshJson(KeySetToJson(MASTER_KEY, key));
             string advertisingToken = _tokenBuilder.WithSiteKey(key).Build();
-            var encrypted =
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
         }
 
@@ -235,9 +225,7 @@ namespace UID2.Client.Test
         public void EncryptDataKeyExpiredCustomNow()
         {
             _client.RefreshJson(KeySetToJson(SITE_KEY));
-            var encrypted =
-                _client.EncryptData(
-                    EncryptionDataRequest.ForData(SOME_DATA).WithKey(SITE_KEY).WithNow(SITE_KEY.Expires));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithKey(SITE_KEY).WithNow(SITE_KEY.Expires));
             Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
         }
 
@@ -245,8 +233,7 @@ namespace UID2.Client.Test
         public void EncryptDataKeyInactiveCustomNow()
         {
             _client.RefreshJson(KeySetToJson(SITE_KEY));
-            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithKey(SITE_KEY)
-                .WithNow(SITE_KEY.Activates.AddSeconds(-1)));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithKey(SITE_KEY).WithNow(SITE_KEY.Activates.AddSeconds(-1)));
             Assert.Equal(EncryptionStatus.KeyInactive, encrypted.Status);
         }
 
@@ -280,9 +267,7 @@ namespace UID2.Client.Test
         public void EncryptDataSiteKeyInactiveCustomNow()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var encrypted = _client.EncryptData(
-                EncryptionDataRequest.ForData(SOME_DATA).WithSiteId(SITE_KEY.SiteId)
-                    .WithNow(SITE_KEY.Activates.AddSeconds(-1)));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithSiteId(SITE_KEY.SiteId).WithNow(SITE_KEY.Activates.AddSeconds(-1)));
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
         }
 
@@ -293,12 +278,10 @@ namespace UID2.Client.Test
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var advertisingToken = _tokenBuilder.withExpiry(expiry).Build();
-            var encrypted =
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);
 
-            var now = DateTimeUtils.FromEpochMilliseconds(
-                DateTimeUtils.DateTimeToEpochMilliseconds(expiry.AddSeconds(-1)));
+            var now = DateTimeUtils.FromEpochMilliseconds(DateTimeUtils.DateTimeToEpochMilliseconds(expiry.AddSeconds(-1)));
             encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA)
                 .WithAdvertisingToken(advertisingToken)
                 .WithNow(now));

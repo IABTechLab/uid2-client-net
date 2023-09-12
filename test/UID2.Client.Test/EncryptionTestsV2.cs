@@ -11,9 +11,7 @@ namespace UID2.Client.Test
     {
         private const int SiteId = 12345;
         private readonly UID2Client _client = new("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
-
-        private readonly AdvertisingTokenBuilder _tokenBuilder =
-            AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V2);
+        private readonly AdvertisingTokenBuilder _tokenBuilder = AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V2);
 
         [Fact]
         public void SmokeTest()
@@ -86,10 +84,8 @@ namespace UID2.Client.Test
         [Fact]
         public void NotAuthorizedForKey()
         {
-            Key anotherMasterKey =
-                new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
-            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1),
-                SITE_SECRET);
+            Key anotherMasterKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
+            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1), SITE_SECRET);
             _client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
             var res = _client.Decrypt(_tokenBuilder.Build(), NOW);

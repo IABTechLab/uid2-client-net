@@ -73,8 +73,7 @@ namespace UID2.Client.Test
             var masterKeyActivates = DateTimeOffset.FromUnixTimeMilliseconds(referenceTimestampMs).DateTime;
             var siteKeyActivates = DateTimeOffset.FromUnixTimeMilliseconds(referenceTimestampMs).DateTime.AddDays(-1);
             //for the foreseeable future...
-            var expiry = DateTimeOffset
-                .FromUnixTimeMilliseconds(referenceTimestampMs).DateTime.AddDays(1 * 365 * 20);
+            var expiry = DateTimeOffset.FromUnixTimeMilliseconds(referenceTimestampMs).DateTime.AddDays(1 * 365 * 20);
 
             Key masterKey = new Key(MASTER_KEY_ID, -1, masterKeyCreated, masterKeyActivates, expiry,
                 MASTER_SECRET);
@@ -92,7 +91,6 @@ namespace UID2.Client.Test
                     .Build();
             //best effort check as the token might simply just not require padding 
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('='));
-
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('+'));
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('/'));
 
@@ -202,10 +200,8 @@ namespace UID2.Client.Test
         [Fact]
         public void NotAuthorizedForMasterKey()
         {
-            Key anotherMasterKey =
-                new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
-            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1),
-                SITE_SECRET);
+            Key anotherMasterKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
+            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1), SITE_SECRET);
             _client.RefreshJson(KeySetToJson(anotherMasterKey, anotherSiteKey));
 
             var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
@@ -244,9 +240,7 @@ namespace UID2.Client.Test
         public void EncryptDataSiteIdFromToken()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var encrypted =
-                _client.EncryptData(
-                    EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()));
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
             var decrypted = _client.DecryptData(encrypted.EncryptedData);
             Assert.Equal(DecryptionStatus.Success, decrypted.Status);
@@ -257,9 +251,7 @@ namespace UID2.Client.Test
         public void EncryptDataSiteIdFromTokenCustomSiteKeySiteId()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var encrypted =
-                _client.EncryptData(
-                    EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()));
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);
             var decrypted = _client.DecryptData(encrypted.EncryptedData);
             Assert.Equal(DecryptionStatus.Success, decrypted.Status);
@@ -271,8 +263,7 @@ namespace UID2.Client.Test
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.Throws<ArgumentException>(() =>
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build())
-                    .WithSiteId(SITE_KEY.SiteId)));
+                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(_tokenBuilder.Build()).WithSiteId(SITE_KEY.SiteId)));
         }
 
         [Fact]
@@ -282,8 +273,7 @@ namespace UID2.Client.Test
             _client.RefreshJson(KeySetToJson(MASTER_KEY, key));
             string advertisingToken = _tokenBuilder.WithSiteKey(key).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
-            var encrypted =
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
         }
 
@@ -295,12 +285,10 @@ namespace UID2.Client.Test
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var advertisingToken = _tokenBuilder.withExpiry(expiry).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
-            var encrypted =
-                _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
+            var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);
 
-            var now = DateTimeUtils.FromEpochMilliseconds(
-                DateTimeUtils.DateTimeToEpochMilliseconds(expiry.AddSeconds(-1)));
+            var now = DateTimeUtils.FromEpochMilliseconds(DateTimeUtils.DateTimeToEpochMilliseconds(expiry.AddSeconds(-1)));
             encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA)
                 .WithAdvertisingToken(advertisingToken)
                 .WithNow(now));
@@ -347,8 +335,7 @@ namespace UID2.Client.Test
             var sendingClient = SharingSetupAndEncrypt(out string advertisingToken);
 
             var receivingClient = new UID2Client("endpoint2", "authkey2", "random secret", IdentityScope.UID2);
-            var json = KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 12345,", callerSiteId: 4874,
-                MASTER_KEY, SITE_KEY);
+            var json = KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 12345,", callerSiteId: 4874, MASTER_KEY, SITE_KEY);
 
             var refreshResult = receivingClient.RefreshJson(json);
             Assert.True(refreshResult.Success);
@@ -401,15 +388,10 @@ namespace UID2.Client.Test
             Assert.Equal(IdentityType.Email,
                 GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=",
                     _client)); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
-            Assert.Equal(IdentityType.Phone,
-                GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ", _client)); //v3 +12345678901
-            Assert.Equal(IdentityType.Email,
-                GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=", _client)); //v2 test@example.com
-            Assert.Equal(IdentityType.Email,
-                GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 test@example.com
-            Assert.Equal(IdentityType.Email,
-                GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb",
-                    _client)); //v3 EUID test@example.com
+            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ", _client)); //v3 +12345678901
+            Assert.Equal(IdentityType.Email,GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=", _client)); //v2 test@example.com
+            Assert.Equal(IdentityType.Email,GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 EUID test@example.com
         }
 
         private IdentityType GetTokenIdentityType(string rawUid, UID2Client client)
@@ -431,10 +413,8 @@ namespace UID2.Client.Test
         [Fact]
         public void MultipleKeysPerKeyset()
         {
-            Key MASTER_KEY2 = new Key(id: 264, siteId: -1, created: NOW.AddDays(-2), activates: YESTERDAY,
-                expires: NOW.AddHours(-1), secret: MASTER_SECRET);
-            Key SITE_KEY2 = new Key(id: 265, siteId: SITE_ID, created: TEN_DAYS_AGO, activates: YESTERDAY,
-                expires: NOW.AddHours(-1), secret: SITE_SECRET);
+            Key MASTER_KEY2 = new Key(id: 264, siteId: -1, created: NOW.AddDays(-2), activates: YESTERDAY, expires: NOW.AddHours(-1), secret: MASTER_SECRET);
+            Key SITE_KEY2 = new Key(id: 265, siteId: SITE_ID, created: TEN_DAYS_AGO, activates: YESTERDAY, expires: NOW.AddHours(-1), secret: SITE_SECRET);
 
             var json = KeySetToJsonForSharing(MASTER_KEY, MASTER_KEY2, SITE_KEY, SITE_KEY2);
             var refreshResult = _client.RefreshJson(json);
@@ -473,8 +453,7 @@ namespace UID2.Client.Test
         [Fact]
         public void ExpiryInTokenMatchesExpiryInResponse()
         {
-            var json = KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 99999, ""token_expiry_seconds"": 2,",
-                SITE_ID, MASTER_KEY, SITE_KEY);
+            var json = KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 99999, ""token_expiry_seconds"": 2,", SITE_ID, MASTER_KEY, SITE_KEY);
             var refreshResult = _client.RefreshJson(json);
             Assert.True(refreshResult.Success);
 

@@ -2,7 +2,6 @@ using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 using System;
-using System.Collections;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,8 +15,7 @@ namespace UID2.Client
         public const int GCM_IV_LENGTH = 12;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
-        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now,
-            IdentityScope identityScope)
+        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, IdentityScope identityScope)
         {
             if (token.Length < 4)
             {
@@ -26,19 +24,19 @@ namespace UID2.Client
 
             string headerStr = token.Substring(0, 4);
             Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
-            byte[] data = isBase64UrlEncoding
-                ? UID2Base64UrlCoder.Decode(headerStr)
-                : Convert.FromBase64String(headerStr);
+            byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
 
             if (data[0] == 2)
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now);
             }
-            else if (data[1] == (int)AdvertisingTokenVersion.V3)
+
+            if (data[1] == (int)AdvertisingTokenVersion.V3)
             {
                 return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope);
             }
-            else if (data[1] == (int)AdvertisingTokenVersion.V4)
+
+            if (data[1] == (int)AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
                 return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope);
@@ -77,9 +75,7 @@ namespace UID2.Client
                 return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
             }
 
-            var identityDecrypted =
-                Decrypt(new ByteArraySlice(masterDecrypted, 28, masterDecrypted.Length - 28),
-                    masterPayloadReader.ReadBytes(16), siteKey.Secret);
+            var identityDecrypted = Decrypt(new ByteArraySlice(masterDecrypted, 28, masterDecrypted.Length - 28), masterPayloadReader.ReadBytes(16), siteKey.Secret);
 
             var identityPayloadReader = new BigEndianByteReader(new MemoryStream(identityDecrypted));
 
@@ -97,18 +93,15 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId,
-                    privacyBits.IsCstgDerived);
-            }
-            
-            if (privacyBits.IsOptedOut)
-            {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId,
-                    privacyBits.IsCstgDerived);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, privacyBits.IsCstgDerived);
             }
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId,
-                privacyBits.IsCstgDerived);
+            if (privacyBits.IsOptedOut)
+            {
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsCstgDerived);
+            }
+
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsCstgDerived);
         }
 
         private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now,
@@ -133,8 +126,7 @@ namespace UID2.Client
                 return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForMasterKey);
             }
 
-            var masterDecrypted =
-                DecryptGCM(new ByteArraySlice(encryptedId, 6, encryptedId.Length - 6), masterKey.Secret);
+            var masterDecrypted = DecryptGCM(new ByteArraySlice(encryptedId, 6, encryptedId.Length - 6), masterKey.Secret);
             var masterPayloadReader = new BigEndianByteReader(new MemoryStream(masterDecrypted));
 
             long expiresMilliseconds = masterPayloadReader.ReadInt64();
@@ -153,8 +145,7 @@ namespace UID2.Client
                 return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
             }
 
-            var sitePayload = DecryptGCM(new ByteArraySlice(masterDecrypted, 33, masterDecrypted.Length - 33),
-                siteKey.Secret);
+            var sitePayload = DecryptGCM(new ByteArraySlice(masterDecrypted, 33, masterDecrypted.Length - 33), siteKey.Secret);
             var sitePayloadReader = new BigEndianByteReader(new MemoryStream(sitePayload));
 
             var siteId = sitePayloadReader.ReadInt32();
@@ -173,18 +164,15 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId,
-                    privacyBits.IsCstgDerived);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, privacyBits.IsCstgDerived);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId,
-                    privacyBits.IsCstgDerived);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsCstgDerived);
             }
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId,
-                privacyBits.IsCstgDerived);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsCstgDerived);
         }
 
         internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope,
@@ -216,10 +204,8 @@ namespace UID2.Client
             try
             {
                 string advertisingToken = (identityScope == IdentityScope.UID2)
-                    ? UID2TokenGenerator.GenerateUid2TokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey,
-                        encryptParams)
-                    : UID2TokenGenerator.GenerateEuidTokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey,
-                        encryptParams);
+                    ? UID2TokenGenerator.GenerateUid2TokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams)
+                    : UID2TokenGenerator.GenerateEuidTokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams);
                 return EncryptionDataResponse.MakeSuccess(advertisingToken);
             }
             catch (Exception)
@@ -228,9 +214,7 @@ namespace UID2.Client
             }
         }
 
-
-        internal static EncryptionDataResponse EncryptData(EncryptionDataRequest request, KeyContainer keys,
-            IdentityScope identityScope)
+        internal static EncryptionDataResponse EncryptData(EncryptionDataRequest request, KeyContainer keys, IdentityScope identityScope)
         {
             if (request.Data == null)
             {
@@ -323,8 +307,7 @@ namespace UID2.Client
             }
         }
 
-        internal static DecryptionDataResponse DecryptData(byte[] encryptedBytes, KeyContainer keys,
-            IdentityScope identityScope)
+        internal static DecryptionDataResponse DecryptData(byte[] encryptedBytes, KeyContainer keys, IdentityScope identityScope)
         {
             if ((encryptedBytes[0] & 224) == (int)PayloadType.ENCRYPTED_DATA_V3)
             {
@@ -359,14 +342,12 @@ namespace UID2.Client
             }
 
             byte[] iv = reader.ReadBytes(16);
-            byte[] decryptedData = Decrypt(new ByteArraySlice(encryptedBytes, 34, encryptedBytes.Length - 34), iv,
-                key.Secret);
+            byte[] decryptedData = Decrypt(new ByteArraySlice(encryptedBytes, 34, encryptedBytes.Length - 34), iv, key.Secret);
 
             return DecryptionDataResponse.MakeSuccess(decryptedData, encryptedAt);
         }
 
-        internal static DecryptionDataResponse DecryptDataV3(byte[] encryptedBytes, KeyContainer keys,
-            IdentityScope identityScope)
+        internal static DecryptionDataResponse DecryptDataV3(byte[] encryptedBytes, KeyContainer keys, IdentityScope identityScope)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedBytes));
             var payloadScope = DecodeIdentityScopeV3(reader.ReadByte());
@@ -386,8 +367,7 @@ namespace UID2.Client
                 return DecryptionDataResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
             }
 
-            var decryptedBytes =
-                DecryptGCM(new ByteArraySlice(encryptedBytes, 6, encryptedBytes.Length - 6), key.Secret);
+            var decryptedBytes = DecryptGCM(new ByteArraySlice(encryptedBytes, 6, encryptedBytes.Length - 6), key.Secret);
             var decryptedReader = new BigEndianByteReader(new MemoryStream(decryptedBytes));
 
             DateTime encryptedAt = DateTimeUtils.FromEpochMilliseconds(decryptedReader.ReadInt64());
@@ -450,8 +430,7 @@ namespace UID2.Client
             var parameters = new AeadParameters(new KeyParameter(secret), GCM_AUTHTAG_LENGTH * 8, iv, null);
             cipher.Init(false, parameters);
             var plainText = new byte[cipher.GetOutputSize(cipherText.Count - GCM_IV_LENGTH)];
-            var len = cipher.ProcessBytes(cipherText.Buffer, cipherText.Offset + GCM_IV_LENGTH,
-                cipherText.Count - GCM_IV_LENGTH, plainText, 0);
+            var len = cipher.ProcessBytes(cipherText.Buffer, cipherText.Offset + GCM_IV_LENGTH, cipherText.Count - GCM_IV_LENGTH, plainText, 0);
             cipher.DoFinal(plainText, len);
             return plainText;
         }

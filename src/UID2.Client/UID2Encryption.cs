@@ -95,17 +95,15 @@ namespace UID2.Client
             var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
 
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
-
-
-            if (privacyBits.IsOptedOut)
-            {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId,
-                    privacyBits.IsCstgDerived);
-            }
-
             if (expiry < now)
             {
                 return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId,
+                    privacyBits.IsCstgDerived);
+            }
+            
+            if (privacyBits.IsOptedOut)
+            {
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId,
                     privacyBits.IsCstgDerived);
             }
 
@@ -173,16 +171,15 @@ namespace UID2.Client
             var idString = Convert.ToBase64String(id);
 
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
+            if (expiry < now)
+            {
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId,
+                    privacyBits.IsCstgDerived);
+            }
 
             if (privacyBits.IsOptedOut)
             {
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId,
-                    privacyBits.IsCstgDerived);
-            }
-
-            if (expiry < now)
-            {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId,
                     privacyBits.IsCstgDerived);
             }
 

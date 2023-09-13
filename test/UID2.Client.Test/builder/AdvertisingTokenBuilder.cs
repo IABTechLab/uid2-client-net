@@ -57,7 +57,7 @@ namespace uid2_client.test.builder
             return this;
         }
 
-        internal AdvertisingTokenBuilder withExpiry(DateTime expiry)
+        internal AdvertisingTokenBuilder WithExpiry(DateTime expiry)
         {
             _expiry = expiry;
             return this;

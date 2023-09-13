@@ -110,7 +110,7 @@ namespace UID2.Client.Test
             var expiry = NOW.AddDays(-60);
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = _tokenBuilder.withExpiry(expiry).Build();;
+            var advertisingToken = _tokenBuilder.WithExpiry(expiry).Build();;
 
             var res = _client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);

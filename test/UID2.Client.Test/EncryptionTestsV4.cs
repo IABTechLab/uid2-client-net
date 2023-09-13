@@ -87,7 +87,7 @@ namespace UID2.Client.Test
                     .WithRawUid(EXAMPLE_UID)
                     .WithMasterKey(masterKey)
                     .WithSiteKey(siteKey)
-                    .withExpiry(expiry)
+                    .WithExpiry(expiry)
                     .Build();
             //best effort check as the token might simply just not require padding 
             Assert.Equal(-1, runtimeAdvertisingToken.IndexOf('='));
@@ -226,7 +226,7 @@ namespace UID2.Client.Test
         {
             var expiry = NOW.AddDays(-60);
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            string advertisingToken = _tokenBuilder.withExpiry(expiry).Build();
+            string advertisingToken = _tokenBuilder.WithExpiry(expiry).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
 
             var res = _client.Decrypt(advertisingToken, expiry.AddSeconds(1));
@@ -283,7 +283,7 @@ namespace UID2.Client.Test
             var expiry = NOW.AddSeconds(-60);
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = _tokenBuilder.withExpiry(expiry).Build();
+            var advertisingToken = _tokenBuilder.WithExpiry(expiry).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
             var encrypted = _client.EncryptData(EncryptionDataRequest.ForData(SOME_DATA).WithAdvertisingToken(advertisingToken));
             Assert.Equal(EncryptionStatus.TokenDecryptFailure, encrypted.Status);

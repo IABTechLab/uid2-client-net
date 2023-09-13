@@ -123,7 +123,7 @@ namespace UID2.Client.Utils
             sitePayloadWriter.Write(0); // client key id
 
             // user identity data
-            sitePayloadWriter.Write(encryptParams.PrivacyBits); // privacy bits
+            sitePayloadWriter.Write(encryptParams.PrivacyBits);
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // established
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // last refreshed
             sitePayloadWriter.Write(Convert.FromBase64String(uid));

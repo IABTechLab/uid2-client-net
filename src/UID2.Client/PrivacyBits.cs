@@ -4,22 +4,21 @@ using System.Collections.Specialized;
 
 namespace UID2.Client
 {
-    readonly struct PrivacyBits
+    public class PrivacyBits
     {
         // Bit 0 is legacy and is no longer in use
-        private const int CstgMask = 2;
-        private const int CstgOptOutMask = 4;
+        private const int BitClientSideGenerated = 1;
+        private const int BitOptedOut = 2;
         
-        private readonly BitVector32 _bits;
+        private readonly BitArray _bits;
 
         public PrivacyBits(int bitsAsInt)
         {
-            _bits = new BitVector32(bitsAsInt);
+            _bits = new BitArray(new [] {bitsAsInt});
         }
 
-        // `_bits[x]` applies bit mask x to _bits, this is not indexing 
-        public bool IsCstgDerived => _bits[CstgMask];
+        public bool IsClientSideGenerated => _bits.Get(BitClientSideGenerated);
 
-        public bool IsOptedOut => _bits[CstgOptOutMask];
+        public bool IsOptedOut => _bits.Get(BitOptedOut);
     }
 }

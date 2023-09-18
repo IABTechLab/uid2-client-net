@@ -6,20 +6,20 @@ namespace uid2_client.test
 {
     public abstract class PrivacyBitsTests
     {
-        public class ReadsCstgBit
+        public class ReadsClientSideGeneratedBit
         {
             [Fact]
             public void WhenFalse()
             {
-                var bits = PrivacyBitsBuilder.Builder().WithAllFlagsEnabled().WithCstgDerived(false).Build();
-                Assert.False(new PrivacyBits(bits).IsCstgDerived);
+                var bits = PrivacyBitsBuilder.Builder().WithAllFlagsEnabled().WithClientSideGenerated(false).Build();
+                Assert.False(new PrivacyBits(bits).IsClientSideGenerated);
             }
 
             [Fact]
             public void WhenTrue()
             {
-                var bits = PrivacyBitsBuilder.Builder().WithAllFlagsDisabled().WithCstgDerived(true).Build();
-                Assert.True(new PrivacyBits(bits).IsCstgDerived);
+                var bits = PrivacyBitsBuilder.Builder().WithAllFlagsDisabled().WithClientSideGenerated(true).Build();
+                Assert.True(new PrivacyBits(bits).IsClientSideGenerated);
             }
         }
 

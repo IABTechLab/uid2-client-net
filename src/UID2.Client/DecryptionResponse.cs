@@ -4,14 +4,14 @@ namespace UID2.Client
 {
     public readonly struct DecryptionResponse
     {
-        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId, int? siteKeySiteId, bool? isCstgDerived = false)
+        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId, int? siteKeySiteId, bool? isClientSideGenerated = false)
         {
             Status = status;
             Uid = uid;
             Established = established;
             SiteId = siteId;
             SiteKeySiteId = siteKeySiteId;
-            IsCstgDerived = isCstgDerived;
+            IsClientSideGenerated = isClientSideGenerated;
         }
 
         public static DecryptionResponse MakeError(DecryptionStatus status)
@@ -25,6 +25,6 @@ namespace UID2.Client
         public DateTime? Established { get; }
         public int? SiteId { get; }
         public int? SiteKeySiteId { get; }
-        public bool? IsCstgDerived { get; }
+        public bool? IsClientSideGenerated { get; }
     }
 }

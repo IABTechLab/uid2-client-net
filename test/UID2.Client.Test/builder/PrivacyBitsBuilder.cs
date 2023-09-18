@@ -31,7 +31,7 @@ namespace uid2_client.test.builder
             return this;
         }
 
-        public PrivacyBitsBuilder WithCstgDerived(bool isCstgDerived)
+        public PrivacyBitsBuilder WithClientSideGenerated(bool isCstgDerived)
         {
             _isCstgDerived = isCstgDerived;
             return this;

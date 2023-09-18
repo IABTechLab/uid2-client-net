@@ -148,11 +148,11 @@ namespace UID2.Client.Test
         public void TokenIsCstgDerivedTest()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var privacyBits = PrivacyBitsBuilder.Builder().WithCstgDerived(true).Build();
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
             var res = _client.Decrypt(advertisingToken, NOW);
-            Assert.True(res.IsCstgDerived);
+            Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
             Assert.Equal(EXAMPLE_UID, res.Uid);
@@ -162,11 +162,11 @@ namespace UID2.Client.Test
         public void TokenIsNotCstgDerivedTest()
         {
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var privacyBits = PrivacyBitsBuilder.Builder().WithCstgDerived(false).Build();
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
             var res = _client.Decrypt(advertisingToken, NOW);
-            Assert.False(res.IsCstgDerived);
+            Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
             Assert.Equal(EXAMPLE_UID, res.Uid);

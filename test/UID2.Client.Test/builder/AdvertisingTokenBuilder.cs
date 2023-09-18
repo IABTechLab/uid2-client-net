@@ -11,14 +11,28 @@ namespace uid2_client.test.builder
         private string _rawUid = EXAMPLE_UID;
         private Key _masterKey = MASTER_KEY;
         private Key _siteKey = SITE_KEY;
-        private int _siteId = SITE_ID;
+        private readonly int _siteId = SITE_ID;
         private int _privacyBits = PrivacyBitsBuilder.Builder().WithAllFlagsDisabled().Build();
         private DateTime _expiry = DateTime.UtcNow.AddHours(1);
-        private IdentityScope _identityScope = IdentityScope.UID2;
+        private readonly IdentityScope _identityScope = IdentityScope.UID2;
+        private Func<string, Key, int, Key, UID2TokenGenerator.Params, string> _generateUid2TokenV2;
+        private Func<string, Key, int, Key, UID2TokenGenerator.Params, string> _generateUid2TokenV3;
+        private Func<string, Key, int, Key, UID2TokenGenerator.Params, string> _generateUid2TokenV4;
+
+        public AdvertisingTokenBuilder(
+            Func<string, Key, int, Key, UID2TokenGenerator.Params, string> generateUid2TokenV2,
+            Func<string, Key, int, Key, UID2TokenGenerator.Params, string> generateUid2TokenV3,
+            Func<string, Key, int, Key, UID2TokenGenerator.Params, string> generateUid2TokenV4
+        )
+        {
+            _generateUid2TokenV2 = generateUid2TokenV2;
+            _generateUid2TokenV3 = generateUid2TokenV3;
+            _generateUid2TokenV4 = generateUid2TokenV4;
+        }
 
         internal static AdvertisingTokenBuilder Builder()
         {
-            return new AdvertisingTokenBuilder();
+            return new AdvertisingTokenBuilder(UID2TokenGenerator.GenerateUid2TokenV2, UID2TokenGenerator.GenerateUid2TokenV3, UID2TokenGenerator.GenerateUid2TokenV4);
         }
 
         internal AdvertisingTokenBuilder WithVersion(TokenVersion version)
@@ -45,12 +59,6 @@ namespace uid2_client.test.builder
             return this;
         }
 
-        internal AdvertisingTokenBuilder WithSiteId(int siteId)
-        {
-            _siteId = siteId;
-            return this;
-        }
-
         internal AdvertisingTokenBuilder WithPrivacyBits(int privacyBits)
         {
             _privacyBits = privacyBits;
@@ -63,21 +71,15 @@ namespace uid2_client.test.builder
             return this;
         }
 
-        internal AdvertisingTokenBuilder WithIdentityScope(IdentityScope identityScope)
-        {
-            _identityScope = identityScope;
-            return this;
-        }
-
         internal string Build()
         {
             var encryptParams = new UID2TokenGenerator.Params().WithPrivacyBits(_privacyBits).WithTokenExpiry(_expiry);
-            encryptParams.IdentityScope = (int) _identityScope;
+            encryptParams.IdentityScope = (int)_identityScope;
             return _tokenVersion switch
             {
-                TokenVersion.V2 => UID2TokenGenerator.GenerateUid2TokenV2(_rawUid, _masterKey, _siteId, _siteKey, encryptParams),
-                TokenVersion.V3 => UID2TokenGenerator.GenerateUid2TokenV3(_rawUid, _masterKey, _siteId, _siteKey, encryptParams),
-                TokenVersion.V4 => UID2TokenGenerator.GenerateUid2TokenV4(_rawUid, _masterKey, _siteId, _siteKey, encryptParams),
+                TokenVersion.V2 => _generateUid2TokenV2(_rawUid, _masterKey, _siteId, _siteKey, encryptParams),
+                TokenVersion.V3 => _generateUid2TokenV3(_rawUid, _masterKey, _siteId, _siteKey, encryptParams),
+                TokenVersion.V4 => _generateUid2TokenV4(_rawUid, _masterKey, _siteId, _siteKey, encryptParams),
                 _ => throw new ArgumentOutOfRangeException()
             };
         }

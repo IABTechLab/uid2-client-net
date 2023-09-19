@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Specialized;
+﻿using System.Collections;
 
 namespace UID2.Client
 {
-    public class PrivacyBits
+    internal class PrivacyBits
     {
         // Bit 0 is legacy and is no longer in use
         private const int BitClientSideGenerated = 1;

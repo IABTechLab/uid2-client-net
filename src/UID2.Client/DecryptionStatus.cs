@@ -12,6 +12,9 @@
         VersionNotSupported,
         InvalidPayloadType,
         InvalidIdentityScope,
-        UserOptedOut // DSPs are still expected to check their records for user opt out, even when this status is not returned
+        /// <summary>
+        ///  DSPs are still expected to check their records for user opt out, even when this status is not returned
+        /// </summary>
+        UserOptedOut
     }
 }

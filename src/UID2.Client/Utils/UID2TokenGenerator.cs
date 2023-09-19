@@ -8,9 +8,6 @@ using System.Text;
 
 namespace UID2.Client.Utils
 {
-    // AU: Since this is essentially test code, we should eventually move it into the test project and probably replace
-    // the confusing combo of "params builder-like + static function" to just be a regular UID2TokenBuilder that produces
-    // a string token on Build()
     [Obsolete("This class shouldn't be used outside of the SDK and will be made internal in the future releases")]
     public static class UID2TokenGenerator
     {

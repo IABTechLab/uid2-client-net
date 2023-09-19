@@ -1,6 +1,4 @@
-﻿using System;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 
 namespace UID2.Client
 {

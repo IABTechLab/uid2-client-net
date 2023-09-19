@@ -25,16 +25,18 @@ namespace UID2.Client
             string headerStr = token.Substring(0, 4);
             Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
             byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
-            
+
             if (data[0] == 2)
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now);
             }
-            else if (data[1] == (int) AdvertisingTokenVersion.V3)
+
+            if (data[1] == (int)AdvertisingTokenVersion.V3)
             {
                 return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope);
             }
-            else if (data[1] == (int) AdvertisingTokenVersion.V4)
+
+            if (data[1] == (int)AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
                 return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope);
@@ -42,7 +44,7 @@ namespace UID2.Client
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
-        
+
         private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
@@ -58,7 +60,8 @@ namespace UID2.Client
                 return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForMasterKey);
             }
 
-            var masterDecrypted = Decrypt(new ByteArraySlice(encryptedId, 21, encryptedId.Length - 21), reader.ReadBytes(16), masterKey.Secret);
+            var masterDecrypted = Decrypt(new ByteArraySlice(encryptedId, 21, encryptedId.Length - 21),
+                reader.ReadBytes(16), masterKey.Secret);
 
             var masterPayloadReader = new BigEndianByteReader(new MemoryStream(masterDecrypted));
 
@@ -72,9 +75,7 @@ namespace UID2.Client
                 return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
             }
 
-            var identityDecrypted =
-                Decrypt(new ByteArraySlice(masterDecrypted, 28, masterDecrypted.Length - 28),
-                    masterPayloadReader.ReadBytes(16), siteKey.Secret);
+            var identityDecrypted = Decrypt(new ByteArraySlice(masterDecrypted, 28, masterDecrypted.Length - 28), masterPayloadReader.ReadBytes(16), siteKey.Secret);
 
             var identityPayloadReader = new BigEndianByteReader(new MemoryStream(identityDecrypted));
 
@@ -83,25 +84,28 @@ namespace UID2.Client
 
             var idString = Encoding.UTF8.GetString(identityPayloadReader.ReadBytes(idLength));
 
-            var privacyBits = identityPayloadReader.ReadInt32();
+            var privacyBits = new PrivacyBits(identityPayloadReader.ReadInt32());
 
             var establishedMilliseconds = identityPayloadReader.ReadInt64();
 
             var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
 
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
-
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
-            else
+
+            if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
+
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope)
+        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now,
+            IdentityScope identityScope)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
@@ -148,7 +152,8 @@ namespace UID2.Client
             var publisherId = sitePayloadReader.ReadInt64();
             var publisherKeyId = sitePayloadReader.ReadInt32();
 
-            var privacyBits = sitePayloadReader.ReadInt32();
+            var privacyBits = new PrivacyBits(sitePayloadReader.ReadInt32());
+
             var establishedMilliseconds = sitePayloadReader.ReadInt64();
             var refreshedMilliseconds = sitePayloadReader.ReadInt64();
             var id = sitePayloadReader.ReadBytes(sitePayload.Length - 36);
@@ -159,15 +164,19 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
-            else
+
+            if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
+
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
         }
 
-        internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope, DateTime now)
+        internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope,
+            DateTime now)
         {
             if (keys == null)
             {
@@ -194,8 +203,9 @@ namespace UID2.Client
 
             try
             {
-                string advertisingToken = (identityScope == IdentityScope.UID2) ? UID2TokenGenerator.GenerateUid2TokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams) :
-                    UID2TokenGenerator.GenerateEuidTokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams);
+                string advertisingToken = (identityScope == IdentityScope.UID2)
+                    ? UID2TokenGenerator.GenerateUid2TokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams)
+                    : UID2TokenGenerator.GenerateEuidTokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams);
                 return EncryptionDataResponse.MakeSuccess(advertisingToken);
             }
             catch (Exception)
@@ -203,7 +213,6 @@ namespace UID2.Client
                 return EncryptionDataResponse.MakeError(EncryptionStatus.EncryptionFailure);
             }
         }
-
 
         internal static EncryptionDataResponse EncryptData(EncryptionDataRequest request, KeyContainer keys, IdentityScope identityScope)
         {
@@ -317,6 +326,7 @@ namespace UID2.Client
             {
                 return DecryptionDataResponse.MakeError(DecryptionStatus.InvalidPayloadType);
             }
+
             if (reader.ReadByte() != 1)
             {
                 return DecryptionDataResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -345,6 +355,7 @@ namespace UID2.Client
             {
                 return DecryptionDataResponse.MakeError(DecryptionStatus.InvalidIdentityScope);
             }
+
             if (reader.ReadByte() != 112)
             {
                 return DecryptionDataResponse.MakeError(DecryptionStatus.VersionNotSupported);

@@ -129,7 +129,7 @@ namespace UID2.Client
 
         private string GetAssemblyNameAndVersion()
         {
-            var version = "5.2.10-domainNameCheck";
+            var version = "5.2.10";
             return "uid-client-net-" + version;
         }
 

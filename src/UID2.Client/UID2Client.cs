@@ -37,6 +37,11 @@ namespace UID2.Client
             return Decrypt(token, DateTime.UtcNow);
         }
 
+        public DecryptionResponse Decrypt(string token, string expectedDomainName)
+        {
+            return Decrypt(token, DateTime.UtcNow);
+        }
+
         public DecryptionResponse Decrypt(string token, DateTime now)
         {
             var container = Volatile.Read(ref _container);

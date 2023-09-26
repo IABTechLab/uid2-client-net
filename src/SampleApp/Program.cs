@@ -10,6 +10,7 @@ namespace app
         static string _authKey;
         static string _secretKey;
         static string _advertisingToken;
+        static string _domain;
 
         static void StartExample(string name)
         {
@@ -31,11 +32,12 @@ namespace app
                 return;
             }
 
-            var result = client.Decrypt(_advertisingToken);
+            var result = client.Decrypt(_advertisingToken, _domain);
             Console.WriteLine($"DecryptedSuccess={result.Success} Status={result.Status}");
             Console.WriteLine($"UID={result.Uid}");
             Console.WriteLine($"EstablishedAt={result.Established}");
             Console.WriteLine($"SiteId={result.SiteId}");
+            Console.WriteLine($"IsClientSideGenerated={result.IsClientSideGenerated}");
         }
 
         static void ExampleAutoRefresh()
@@ -58,7 +60,7 @@ namespace app
 
             for (int i = 0; i < 5; ++i)
             {
-                var result = client.Decrypt(_advertisingToken);
+                var result = client.Decrypt(_advertisingToken, _domain);
                 Console.WriteLine($"DecryptSuccess={result.Success} Status={result.Status} UID={result.Uid}");
                 Console.Out.Flush();
                 Thread.Sleep(TimeSpan.FromSeconds(5));
@@ -105,7 +107,7 @@ namespace app
         {
             if (args.Length < 4)
             {
-                Console.Error.WriteLine("Usage: test-client <base-url> <auth-key> <secret-key> <ad-token>");
+                Console.Error.WriteLine("Usage: test-client <base-url> <auth-key> <secret-key> <ad-token> [<domain-name>]");
                 return 1;
             }
 
@@ -113,7 +115,10 @@ namespace app
             _authKey = args[1];
             _secretKey = args[2];
             _advertisingToken = args[3];
-
+            if (args.Length >= 5)
+            {
+                _domain = args[4];
+            }
 
             ExampleBasicRefresh();
             ExampleAutoRefresh();

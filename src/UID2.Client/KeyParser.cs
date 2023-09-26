@@ -61,9 +61,32 @@ namespace UID2.Client
                         Convert.FromBase64String(item.Value<string>("secret"))
                     )).ToList();
 
-                return new KeyContainer(callerSiteId, masterKeysetId, defaultKeysetId, tokenExpirySeconds, keys);
+                var sites = Enumerable.Empty<Site>();
+                if (TryGetSitesJson(body, out var sitesJson))
+                {
+                    sites = sitesJson.Select(SiteFromJson).ToList();
+                }
 
+                return new KeyContainer(callerSiteId, masterKeysetId, defaultKeysetId, tokenExpirySeconds, keys, sites);
             }
+        }
+
+        private static bool TryGetSitesJson(JObject obj, out JArray value)
+        {
+            if (obj.TryGetValue("site_data", StringComparison.OrdinalIgnoreCase, out var sites) && sites.Type == JTokenType.Array)
+            {
+                value = (JArray)sites;
+                return true;
+            }
+
+            value = default;
+            return false;
+        }
+
+        private static Site SiteFromJson(JToken item)
+        {
+            var domainNames = (JArray)item["domain_names"];
+            return new Site(item.Value<int>("id"), domainNames.Select(x => (string)x));
         }
     }
 }

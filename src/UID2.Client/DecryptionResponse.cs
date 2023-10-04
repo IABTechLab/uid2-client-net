@@ -10,9 +10,10 @@ namespace UID2.Client
         private readonly int? _siteId;
         private readonly int? _siteKeySiteId;
         private readonly IdentityType? _identityType;
+        private readonly int? _advertisingTokenVersion;
 
         public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId,
-            int? siteKeySiteId, IdentityType? identityType)
+            int? siteKeySiteId, IdentityType? identityType, int? advertisingTokenVersion)
         {
             _status = status;
             _uid = uid;
@@ -20,11 +21,12 @@ namespace UID2.Client
             _siteId = siteId;
             _siteKeySiteId = siteKeySiteId;
             _identityType = identityType;
+            _advertisingTokenVersion = advertisingTokenVersion;
         }
 
         public static DecryptionResponse MakeError(DecryptionStatus status)
         {
-            return new DecryptionResponse(status, null, null, null, null, null);
+            return new DecryptionResponse(status, null, null, null, null, null, null);
         }
 
         public bool Success => _status == DecryptionStatus.Success;
@@ -34,5 +36,6 @@ namespace UID2.Client
         public int? SiteId => _siteId;
         public int? SiteKeySiteId => _siteKeySiteId;
         public IdentityType? IdentityType => _identityType;
+        public int? AdvertisingTokenVersion => _advertisingTokenVersion;
     }
 }

@@ -26,12 +26,14 @@ namespace UID2.Client.Test
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
+            
             string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV3(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(IdentityType.Email, res.IdentityType);
+            Assert.Equal(3, res.AdvertisingTokenVersion);
         }
-
 
         [Fact]
         public void EmptyKeyContainer()
@@ -83,6 +85,18 @@ namespace UID2.Client.Test
 
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.Equal(DecryptionStatus.InvalidPayload, res.Status);
+        }
+        
+        [Fact]
+        public void InvalidIdentityType()
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
+            var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            Assert.True(refreshResult.Success);
+            
+            string advertisingToken = UID2TokenGenerator.GenerateUid2TokenV3(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams).Replace("A", "C");
+            var res = client.Decrypt(advertisingToken, NOW);
+            Assert.Equal(DecryptionStatus.InvalidIdentityType, res.Status);
         }
 
         [Fact]

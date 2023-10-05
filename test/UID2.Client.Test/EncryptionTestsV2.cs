@@ -24,10 +24,13 @@ namespace UID2.Client.Test
             var client = new UID2Client("ep", "ak", CLIENT_SECRET, IdentityScope.UID2);
             var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
+            
             String advertisingToken = UID2TokenGenerator.GenerateUid2TokenV2(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY);
             var res = client.Decrypt(advertisingToken, NOW);
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Null(res.IdentityType);
+            Assert.Equal(2, res.AdvertisingTokenVersion);
         }
 
         [Fact]

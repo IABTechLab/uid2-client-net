@@ -23,21 +23,32 @@ namespace UID2.Client
             }
 
             string headerStr = token.Substring(0, 4);
+            IdentityType? identityType = null;
+            switch (headerStr.Substring(0, 1))
+            {
+                case "A": case "E":
+                    identityType = IdentityType.Email;
+                    break;
+
+                case "B": case "F":
+                    identityType = IdentityType.Phone;
+                    break;
+            }
             Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
             byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
-            
+
             if (data[0] == 2)
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now);
             }
             else if (data[1] == (int) AdvertisingTokenVersion.V3)
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope);
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, identityType);
             }
             else if (data[1] == (int) AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope);
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, identityType);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -93,15 +104,15 @@ namespace UID2.Client
 
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null);
             }
             else
             {
-                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null);
             }
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope)
+        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, IdentityType? identityType = null)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
@@ -159,11 +170,11 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType);
             }
             else
             {
-                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId);
+                return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType);
             }
         }
 

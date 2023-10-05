@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 using System.Threading;
 using UID2.Client;
 
@@ -37,6 +36,8 @@ namespace app
             Console.WriteLine($"UID={result.Uid}");
             Console.WriteLine($"EstablishedAt={result.Established}");
             Console.WriteLine($"SiteId={result.SiteId}");
+            Console.WriteLine($"IdentityType={result.IdentityType}");
+            Console.WriteLine($"AdvertisingTokenVersion={result.AdvertisingTokenVersion}");
         }
 
         static void ExampleAutoRefresh()

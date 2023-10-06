@@ -104,11 +104,6 @@ namespace UID2.Client
 
         private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, IdentityType? identityType, int advertisingTokenVersion)
         {
-            if (identityType == null)
-            {
-                return DecryptionResponse.MakeError(DecryptionStatus.InvalidIdentityType);
-            }
-            
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             var prefix = reader.ReadByte();

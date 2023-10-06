@@ -12,6 +12,5 @@
         VersionNotSupported,
         InvalidPayloadType,
         InvalidIdentityScope,
-        InvalidIdentityType,
     }
 }

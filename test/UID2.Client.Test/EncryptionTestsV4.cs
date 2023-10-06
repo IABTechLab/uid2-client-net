@@ -131,6 +131,25 @@ namespace UID2.Client.Test
             return advertisingToken;
         }
 
+        [Theory]
+        [InlineData("A", nameof(IdentityScope.UID2), IdentityType.Email)]
+        [InlineData("B", nameof(IdentityScope.UID2), IdentityType.Phone)]
+        [InlineData("E", nameof(IdentityScope.EUID), IdentityType.Email)]
+        [InlineData("F", nameof(IdentityScope.EUID), IdentityType.Phone)]
+        public void IdentityScopeAndType_TestCases(String idType, string identityScope, IdentityType? identityType)
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, Enum.Parse<IdentityScope>(identityScope));
+            var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            Assert.True(refreshResult.Success);
+            
+            string advertisingToken = idType + UID2TokenGenerator.GenerateUid2TokenV4(EXAMPLE_UID, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams).Substring(1);
+            var res = client.Decrypt(advertisingToken, NOW);
+            Assert.True(res.Success);
+            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(identityType, res.IdentityType);
+            Assert.Equal(4, res.AdvertisingTokenVersion);
+        }
+
         [Fact]
         public void SmokeTest()
         {

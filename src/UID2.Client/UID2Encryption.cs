@@ -23,10 +23,10 @@ namespace UID2.Client
             }
 
             string headerStr = token.Substring(0, 4);
-            IdentityType? identityType = GetIdentityType(headerStr.Substring(0, 1));
             Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
             byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
-
+            IdentityType? identityType = GetIdentityType((byte) ((data[0] & 12) >> 2));
+            
             if (data[0] == 2)
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now);
@@ -437,14 +437,14 @@ namespace UID2.Client
             return (IdentityScope)((value >> 4) & 1);
         }
 
-        private static IdentityType? GetIdentityType(String idType)
+        private static IdentityType? GetIdentityType(byte idType)
         {
             switch (idType)
             {
-                case "A": case "E":
+                case 0:
                     return IdentityType.Email;
 
-                case "B": case "F":
+                case 1:
                     return IdentityType.Phone;
                 
                 default:

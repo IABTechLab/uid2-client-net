@@ -25,7 +25,6 @@ namespace UID2.Client
             string headerStr = token.Substring(0, 4);
             Boolean isBase64UrlEncoding = headerStr.IndexOfAny(BASE64_URL_SPECIAL_CHARS) != -1;
             byte[] data = isBase64UrlEncoding ? UID2Base64UrlCoder.Decode(headerStr) : Convert.FromBase64String(headerStr);
-            IdentityType? identityType = GetIdentityType((byte) ((data[0] & 12) >> 2));
             
             if (data[0] == 2)
             {
@@ -33,12 +32,12 @@ namespace UID2.Client
             }
             else if (data[1] == (int) AdvertisingTokenVersion.V3)
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, identityType, 3);
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3);
             }
             else if (data[1] == (int) AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, identityType, 4);
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -102,8 +101,10 @@ namespace UID2.Client
             }
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, IdentityType? identityType, int advertisingTokenVersion)
+        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion)
         {
+            IdentityType identityType = GetIdentityType(encryptedId);
+
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             var prefix = reader.ReadByte();
@@ -437,19 +438,16 @@ namespace UID2.Client
             return (IdentityScope)((value >> 4) & 1);
         }
 
-        private static IdentityType? GetIdentityType(byte idType)
+        private static IdentityType GetIdentityType(byte[] encryptedId)
         {
-            switch (idType)
-            {
-                case 0:
-                    return IdentityType.Email;
-
-                case 1:
-                    return IdentityType.Phone;
-                
-                default:
-                    return null;
-            }
+            // For specifics about the bitwise logic, check:
+            // Confluence - UID2-79 UID2 Token v3/v4 and Raw UID2 format v3
+            // In the base64-encoded version of encryptedId, the first character is always either A/B/E/F.
+            // After converting to binary and performing the AND operation against 1100,the result is always 0X00.
+            // So just bitshift right twice to get 000X, which results in either 0 or 1.
+            byte idType = encryptedId[0];
+            byte piiType = (byte)((idType & 0b_1100) >> 2);
+            return piiType == 0 ? IdentityType.Email : IdentityType.Phone;
         }
     }
 }

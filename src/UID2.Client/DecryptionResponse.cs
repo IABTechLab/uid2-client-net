@@ -2,40 +2,34 @@
 
 namespace UID2.Client
 {
-    public struct DecryptionResponse
+    public readonly struct DecryptionResponse
     {
-        private readonly DecryptionStatus _status;
-        private readonly string _uid;
-        private readonly DateTime? _established;
-        private readonly int? _siteId;
-        private readonly int? _siteKeySiteId;
-        private readonly IdentityType? _identityType;
-        private readonly int? _advertisingTokenVersion;
-
-        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId,
-            int? siteKeySiteId, IdentityType? identityType, int? advertisingTokenVersion)
+        public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId, int? siteKeySiteId, IdentityType? identityType, int? advertisingTokenVersion,
+            bool? isClientSideGenerated = false)
         {
-            _status = status;
-            _uid = uid;
-            _established = established;
-            _siteId = siteId;
-            _siteKeySiteId = siteKeySiteId;
-            _identityType = identityType;
-            _advertisingTokenVersion = advertisingTokenVersion;
+            Status = status;
+            Uid = uid;
+            Established = established;
+            SiteId = siteId;
+            SiteKeySiteId = siteKeySiteId;
+            IdentityType = identityType;
+            AdvertisingTokenVersion = advertisingTokenVersion;
+            IsClientSideGenerated = isClientSideGenerated;
         }
 
         public static DecryptionResponse MakeError(DecryptionStatus status)
         {
-            return new DecryptionResponse(status, null, null, null, null, null, null);
+            return new DecryptionResponse(status, null, null, null, null, null, null, null);
         }
 
-        public bool Success => _status == DecryptionStatus.Success;
-        public DecryptionStatus Status => _status;
-        public string Uid => _uid;
-        public DateTime? Established => _established;
-        public int? SiteId => _siteId;
-        public int? SiteKeySiteId => _siteKeySiteId;
-        public IdentityType? IdentityType => _identityType;
-        public int? AdvertisingTokenVersion => _advertisingTokenVersion;
+        public bool Success => Status == DecryptionStatus.Success;
+        public DecryptionStatus Status { get; }
+        public string Uid { get; }
+        public DateTime? Established { get; }
+        public int? SiteId { get; }
+        public int? SiteKeySiteId { get; }
+        public IdentityType? IdentityType { get; }
+        public int? AdvertisingTokenVersion { get; }
+        public bool? IsClientSideGenerated { get; }
     }
 }

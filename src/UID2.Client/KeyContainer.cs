@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UID2.Client.Utils;
 
 namespace UID2.Client
@@ -12,6 +13,9 @@ namespace UID2.Client
         private readonly Dictionary<int, List<Key>> _keysBySite = new Dictionary<int, List<Key>>(); //for legacy /key/latest
 
         private readonly Dictionary<int, List<Key>> _keysByKeyset = new Dictionary<int, List<Key>>();
+
+        private readonly Dictionary<int, Site> _sites = new Dictionary<int, Site>();
+
         private readonly int _callerSiteId;
         private readonly int _masterKeysetId;
         private readonly int _defaultKeysetId;
@@ -45,7 +49,7 @@ namespace UID2.Client
             }
         }
 
-        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys)
+        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys, IEnumerable<Site> sites)
         {   //key/sharing
             _callerSiteId = callerSiteId;
             _masterKeysetId = masterKeysetId;
@@ -77,6 +81,8 @@ namespace UID2.Client
             {
                 kv.Value.Sort((Key a, Key b) => a.Activates.CompareTo(b.Activates));
             }
+
+            _sites = sites.ToDictionary(site => site.Id, site => site);
         }
 
         public bool IsValid(DateTime asOf)
@@ -102,6 +108,11 @@ namespace UID2.Client
         public bool TryGetMasterKey(DateTime now, out Key key)
         {
             return TryGetKeysetActiveKey(_masterKeysetId, now, out key);
+        }
+
+        public bool IsDomainNameForSite(int siteId, string domainName)
+        {
+            return _sites.TryGetValue(siteId, out var site) && site.HasDomainName(domainName);
         }
 
         private bool TryGetKeysetActiveKey(int keysetId, DateTime now, out Key key)

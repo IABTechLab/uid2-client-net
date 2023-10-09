@@ -175,28 +175,56 @@ namespace UID2.Client.Test
             Assert.Null(res.Uid);
         }
 
-        [Fact]
-        public void TokenIsCstgDerivedTest()
+        [Theory]
+        // These are the domains associated with site SITE_ID, as defined by KeySharingResponse();
+        [InlineData("example.com")]
+        [InlineData("example.org")]
+        public void TokenIsCstgDerivedTest(string domainName)
         {
-            _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(advertisingToken, NOW, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
             Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
-        [Fact]
-        public void TokenIsNotCstgDerivedTest()
+        [Theory]
+        [InlineData((string)null)]
+        [InlineData("")]
+        // Domains associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("example.net")]
+        [InlineData("example.edu")]
+        // Domain not associated with any site.
+        [InlineData("foo.com")]
+        public void TokenIsCstgDerivedDomainNameFailTest(string domainName)
         {
-            _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            var res = _client.Decrypt(advertisingToken, NOW, domainName);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.DomainNameCheckFailed, res.Status);
+            Assert.Null(res.Uid);
+        }
+
+        [Theory]
+        // Any domain name is OK, because the token is not client-side generated.
+        [InlineData((string) null)]
+        [InlineData("")]
+        [InlineData("example.com")]
+        [InlineData("foo.com")]
+        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName)
+        {
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(advertisingToken, NOW, domainName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
@@ -366,7 +394,7 @@ namespace UID2.Client.Test
             var sendingClient = SharingSetupAndEncrypt(out string advertisingToken);
 
             var receivingClient = new UID2Client("endpoint2", "authkey2", "random secret", IdentityScope.UID2);
-            var json = KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 12345,", callerSiteId: 4874, MASTER_KEY, SITE_KEY);
+            var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, callerSiteId: 4874, defaultKeysetId: 12345);
 
             var refreshResult = receivingClient.RefreshJson(json);
             Assert.True(refreshResult.Success);
@@ -473,7 +501,7 @@ namespace UID2.Client.Test
         [Fact]
         public void CannotEncryptIfTheresNoDefaultKeysetHeader()
         {
-            var json = KeySetToJsonForSharingWithHeader(defaultKeyset: "", SITE_ID, MASTER_KEY, SITE_KEY);
+            var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, SITE_ID);
             var refreshResult = _client.RefreshJson(json);
             Assert.True(refreshResult.Success);
 
@@ -484,7 +512,7 @@ namespace UID2.Client.Test
         [Fact]
         public void ExpiryInTokenMatchesExpiryInResponse()
         {
-            var json = KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 99999, ""token_expiry_seconds"": 2,", SITE_ID, MASTER_KEY, SITE_KEY);
+            var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, SITE_ID, defaultKeysetId: 99999, tokenExpirySeconds: 2);
             var refreshResult = _client.RefreshJson(json);
             Assert.True(refreshResult.Success);
 
@@ -541,25 +569,7 @@ namespace UID2.Client.Test
 
         private static string KeySetToJsonForSharing(params Key[] keys)
         {
-            return KeySetToJsonForSharingWithHeader(@"""default_keyset_id"": 99999,", SITE_ID, keys);
-        }
-
-        private static string KeySetToJsonForSharingWithHeader(string defaultKeyset, int callerSiteId,
-            params Key[] keys)
-        {
-            return $@"{{
-                ""body"": {{
-                    ""caller_site_id"": {callerSiteId},
-                    ""master_keyset_id"": 1,
-                    {defaultKeyset}
-                    ""keys"": [" + string.Join(",", keys.Select(k => $@"{{
-                        ""id"": {k.Id},
-                        ""keyset_id"": {k.SiteId switch { -1 => 1, SITE_ID => 99999, _ => k.SiteId }},
-                        ""created"": {DateTimeUtils.DateTimeToEpochSeconds(k.Created)},
-                        ""activates"": {DateTimeUtils.DateTimeToEpochSeconds(k.Activates)},
-                        ""expires"": {DateTimeUtils.DateTimeToEpochSeconds(k.Expires)},
-                        ""secret"": ""{Convert.ToBase64String(k.Secret)}"" }}")) +
-                   @"] }}";
+            return KeySharingResponse(keys, SITE_ID, defaultKeysetId: 99999);
         }
     }
 }

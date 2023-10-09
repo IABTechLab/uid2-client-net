@@ -35,9 +35,10 @@ namespace UID2.Client
         /// <returns>Response showing if decryption is successful and the resulting UID if successful.
         /// Or it could return error codes/string indicating what went wrong
         /// </returns>
-        [Obsolete("Please use Decrypt(string token) instead.")] 
+        [Obsolete("Please use Decrypt(string token) instead.")]
         DecryptionResponse Decrypt(string token, DateTime utcNow);
         DecryptionResponse Decrypt(string token);
+        DecryptionResponse Decrypt(string token, string expectedDomainName);
 
         EncryptionDataResponse Encrypt(string rawUid);
         [Obsolete("Please use Encrypt(string rawUid) instead.")]

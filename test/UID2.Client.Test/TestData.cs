@@ -1,5 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using UID2.Client;
 using UID2.Client.Utils;
 
@@ -51,6 +54,50 @@ namespace uid2_client.test
                 ""expires"": {DateTimeUtils.DateTimeToEpochSeconds(k.Expires)},
                 ""secret"": ""{Convert.ToBase64String(k.Secret)}""
                 }}")) + "]}";
+        }
+
+        internal static string KeySharingResponse(IEnumerable<Key> keys, int? callerSiteId = SITE_ID, int? defaultKeysetId = null, int? tokenExpirySeconds = null)
+        {
+            var keyToJson = (Key key) => new
+            {
+                id = key.Id,
+                keyset_id = key.SiteId switch { -1 => 1, SITE_ID => 99999, _ => key.SiteId },
+                created = DateTimeUtils.DateTimeToEpochSeconds(key.Created),
+                activates = DateTimeUtils.DateTimeToEpochSeconds(key.Activates),
+                expires = DateTimeUtils.DateTimeToEpochSeconds(key.Expires),
+                secret = Convert.ToBase64String(key.Secret),
+            };
+
+            var json = JObject.FromObject(new
+            {
+                body = new
+                {
+                    caller_site_id = callerSiteId,
+                    master_keyset_id = 1,
+                    token_expiry_seconds = tokenExpirySeconds ?? 2592000,
+                    keys = keys.Select(keyToJson).ToArray(),
+                    site_data = new[]
+                    {
+                        new
+                        {
+                            id = SITE_ID,
+                            domain_names = new[] { "example.com", "example.org" }
+                        },
+                        new
+                        {
+                            id = SITE_ID2,
+                            domain_names = new[] { "example.net", "example.edu" }
+                        }
+                    }
+                }
+            });
+
+            if (defaultKeysetId != null)
+            {
+                json["body"]["default_keyset_id"] = defaultKeysetId;
+            }
+
+            return json.ToString();
         }
 
         private static byte[] MakeTestSecret(byte value)

@@ -2,7 +2,7 @@
 <package>
   <metadata>
     <id>UID2.Client</id>
-    <version>5.2.0</version>
+    <version>5.2.11</version>
     <title>UID2 Client C# SDK</title>
     <authors>UID2 team</authors>
     <owners>UID2 team</owners>

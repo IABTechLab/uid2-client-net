@@ -38,26 +38,54 @@ namespace UID2.Client.Test
             Assert.Null(res.Uid);
         }
 
-        [Fact]
-        public void TokenIsCstgDerivedTest()
+        [Theory]
+        // These are the domains associated with site SITE_ID, as defined by KeySharingResponse();
+        [InlineData("example.com")]
+        [InlineData("example.org")]
+        public void TokenIsCstgDerivedTest(string domainName)
         {
-            _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(advertisingToken, NOW, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
             Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
-        [Fact]
-        public void TokenIsNotCstgDerivedTest()
+        [Theory]
+        [InlineData((string)null)]
+        [InlineData("")]
+        // Domains associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("example.net")]
+        [InlineData("example.edu")]
+        // Domain not associated with any site.
+        [InlineData("foo.com")]
+        public void TokenIsCstgDerivedDomainNameFailTest(string domainName)
         {
-            _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            var res = _client.Decrypt(advertisingToken, NOW, domainName);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.DomainNameCheckFailed, res.Status);
+            Assert.Null(res.Uid);
+        }
+
+        [Theory]
+        // Any domain name is OK, because the token is not client-side generated.
+        [InlineData((string) null)]
+        [InlineData("")]
+        [InlineData("example.com")]
+        [InlineData("foo.com")]
+        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName)
+        {
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, NOW);
+            var res = _client.Decrypt(advertisingToken, NOW, domainName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);

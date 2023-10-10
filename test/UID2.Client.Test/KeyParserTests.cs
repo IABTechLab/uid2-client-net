@@ -1,8 +1,8 @@
 using Xunit;
-using System.IO;
-using System.Text;
 using UID2.Client.Utils;
 using System;
+using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace UID2.Client.Test
 {
@@ -115,6 +115,112 @@ namespace UID2.Client.Test
             Assert.ThrowsAny<Exception>(() => KeyParser.Parse(@"{""body"": [{}]}"));
             Assert.ThrowsAny<Exception>(() => KeyParser.Parse(@"{""body"": [{""id"": ""test""}]}"));
             Assert.ThrowsAny<Exception>(() => KeyParser.Parse(@"{""body"": [{""id"": 5}]}"));
+        }
+
+        [Fact]
+        public void ParseMissingSiteData()
+        {
+            var json = /*lang=json,strict*/ @"{
+                ""body"": {
+                    ""keys"": [
+                        {
+                            ""id"": 3,
+                            ""keyset_id"": 99999,
+                            ""created"": 1609459200,
+                            ""activates"": 1609459210,
+                            ""expires"": 1893456000,
+                            ""secret"": ""o8HsvkwJ5Ulnrd0uui3GpukpwDapj+JLqb7qfN/GJKo=""
+                        }
+                    ]
+                }
+            }";
+
+            var keyContainer = KeyParser.Parse(json);
+
+            var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
+
+            Assert.False(isDomainNameForSite);
+
+            Assert.True(keyContainer.TryGetKey(3, out var key));
+        }
+
+        [Fact]
+        public void ParseEmptySiteData()
+        {
+            var json = /*lang=json,strict*/ @"{
+                ""body"": {
+                    ""keys"": [
+                        {
+                            ""id"": 3,
+                            ""keyset_id"": 99999,
+                            ""created"": 1609459200,
+                            ""activates"": 1609459210,
+                            ""expires"": 1893456000,
+                            ""secret"": ""o8HsvkwJ5Ulnrd0uui3GpukpwDapj+JLqb7qfN/GJKo=""
+                        }
+                    ],
+                    ""site_data"": []
+                }
+            }";
+
+            var keyContainer = KeyParser.Parse(json);
+
+            var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
+            Assert.False(isDomainNameForSite);
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(1, null));
+
+            Assert.True(keyContainer.TryGetKey(3, out var key));
+        }
+
+        [Fact]
+        public void ParseSiteDataSharingEndpoint()
+        {
+            var s = @"{
+                ""body"": {
+                    ""keys"": [
+                        {
+                            ""id"": 3,
+                            ""keyset_id"": 99999,
+                            ""created"": 1609459200,
+                            ""activates"": 1609459210,
+                            ""expires"": 1893456000,
+                            ""secret"": ""o8HsvkwJ5Ulnrd0uui3GpukpwDapj+JLqb7qfN/GJKo=""
+                        }
+                    ],
+                    ""site_data"": [
+                        {
+                            ""id"": 9,
+                            ""domain_names"": [""example.com""]
+                        },
+                        {
+                            ""id"": 100,
+                            ""domain_names"": [""example.org"", ""example.net""]
+                        }
+                    ],
+                },
+            }";
+
+            var keyContainer = KeyParser.Parse(s);
+
+            Assert.True(keyContainer.IsDomainNameAllowedForSite(9, "example.com"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(9, "example.org"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(9, "example.net"));
+
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(100, "example.com"));
+            Assert.True(keyContainer.IsDomainNameAllowedForSite(100, "example.org"));
+            Assert.True(keyContainer.IsDomainNameAllowedForSite(100, "example.net"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(100, null));
+
+            Assert.True(keyContainer.TryGetKey(3, out var key));
+        }
+
+        [Fact]
+        public void ParseErrorSiteData()
+        {
+            Assert.ThrowsAny<Exception>(() => KeyParser.Parse(/*lang=json,strict*/ @"{""body"":{""site_data"": 123}}"));
+            Assert.ThrowsAny<Exception>(() => KeyParser.Parse(/*lang=json,strict*/ @"{""body"":{""site_data"": {}}}"));
+            Assert.ThrowsAny<Exception>(() => KeyParser.Parse(/*lang=json,strict*/ @"{""body"":{""site_data"": [{}]}}"));
+            Assert.ThrowsAny<Exception>(() => KeyParser.Parse(/*lang=json,strict*/ @"{""body"":{""site_data"": [{}]}}"));
         }
     }
 }

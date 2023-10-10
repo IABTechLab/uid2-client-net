@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>uid2_client.test</RootNamespace>
     <IsPackable>false</IsPackable>
   </PropertyGroup>
@@ -23,5 +23,6 @@
     <ProjectReference Include="..\..\src\UID2.Client\UID2.Client.csproj" />
     <ProjectReference Include="..\..\test\UID2.Client.Test.Utils\UID2.Client.Test.Utils.csproj" />
   </ItemGroup>
+
 
 </Project>

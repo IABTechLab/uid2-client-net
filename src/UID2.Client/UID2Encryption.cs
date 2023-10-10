@@ -101,7 +101,7 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
 
-            if (!IsValidDomainNameForSite(privacyBits, siteId, domainName, keys))
+            if (!IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
             {
                 return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
@@ -178,7 +178,7 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
 
-            if (!IsValidDomainNameForSite(privacyBits, siteId, domainName, keys))
+            if (!IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
             {
                 return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
@@ -186,14 +186,14 @@ namespace UID2.Client
             return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
         }
 
-        private static bool IsValidDomainNameForSite(PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)
+        private static bool IsDomainNameAllowedForSite(PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)
         {
             if (!privacyBits.IsClientSideGenerated)
             {
                 return true;
             }
 
-            return keys.IsDomainNameForSite(siteId, domainName);
+            return keys.IsDomainNameAllowedForSite(siteId, domainName);
         }
 
         internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope,

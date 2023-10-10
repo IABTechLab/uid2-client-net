@@ -34,10 +34,20 @@ namespace UID2.Client
 
         public DecryptionResponse Decrypt(string token)
         {
-            return Decrypt(token, DateTime.UtcNow);
+            return Decrypt(token, DateTime.UtcNow, expectedDomainName: null);
         }
 
-        public DecryptionResponse Decrypt(string token, DateTime now)
+        public DecryptionResponse Decrypt(string token, DateTime utcNow)
+        {
+            return Decrypt(token, utcNow, expectedDomainName: null);
+        }
+
+        public DecryptionResponse Decrypt(string token, string expectedDomainName)
+        {
+            return Decrypt(token, DateTime.UtcNow, expectedDomainName);
+        }
+
+        public DecryptionResponse Decrypt(string token, DateTime now, string expectedDomainName)
         {
             var container = Volatile.Read(ref _container);
             if (container == null)
@@ -52,7 +62,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, _identityScope);
+                return UID2Encryption.Decrypt(token, container, now, expectedDomainName, _identityScope);
             }
             catch (Exception)
             {
@@ -124,7 +134,7 @@ namespace UID2.Client
 
         private string GetAssemblyNameAndVersion()
         {
-            var version = "5.2.0";
+            var version = "5.3.0";
             return "uid-client-net-" + version;
         }
 

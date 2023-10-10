@@ -14,7 +14,7 @@ namespace UID2.Client
 
         private readonly Dictionary<int, List<Key>> _keysByKeyset = new Dictionary<int, List<Key>>();
 
-        private readonly Dictionary<int, Site> _sites = new Dictionary<int, Site>();
+        private readonly Dictionary<int, Site> _siteIdToSite = new Dictionary<int, Site>();
 
         private readonly int _callerSiteId;
         private readonly int _masterKeysetId;
@@ -82,7 +82,7 @@ namespace UID2.Client
                 kv.Value.Sort((Key a, Key b) => a.Activates.CompareTo(b.Activates));
             }
 
-            _sites = sites.ToDictionary(site => site.Id, site => site);
+            this._siteIdToSite = sites.ToDictionary(site => site.Id, site => site);
         }
 
         public bool IsValid(DateTime asOf)
@@ -110,9 +110,14 @@ namespace UID2.Client
             return TryGetKeysetActiveKey(_masterKeysetId, now, out key);
         }
 
-        public bool IsDomainNameForSite(int siteId, string domainName)
+        public bool IsDomainNameAllowedForSite(int siteId, string domainName)
         {
-            return _sites.TryGetValue(siteId, out var site) && site.HasDomainName(domainName);
+            if (domainName == null)
+            {
+                return false;
+            }
+            
+            return this._siteIdToSite.TryGetValue(siteId, out var site) && site.AllowDomainName(domainName);
         }
 
         private bool TryGetKeysetActiveKey(int keysetId, DateTime now, out Key key)

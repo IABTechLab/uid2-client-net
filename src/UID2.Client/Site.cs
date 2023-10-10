@@ -15,6 +15,6 @@ namespace UID2.Client
 
         public int Id { get; }
 
-        public bool HasDomainName(string domainName) => _domainNames.Contains(domainName);
+        public bool AllowDomainName(string domainName) => _domainNames.Contains(domainName);
     }
 }

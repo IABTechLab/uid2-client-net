@@ -137,7 +137,7 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(json);
 
-            var isDomainNameForSite = keyContainer.IsDomainNameForSite(1, "example.com");
+            var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
 
             Assert.False(isDomainNameForSite);
 
@@ -165,10 +165,9 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(json);
 
-            var isDomainNameForSite = keyContainer.IsDomainNameForSite(1, "example.com");
-
+            var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
             Assert.False(isDomainNameForSite);
-
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(1, null));
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }
 
@@ -202,13 +201,14 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(s);
 
-            Assert.True(keyContainer.IsDomainNameForSite(9, "example.com"));
-            Assert.False(keyContainer.IsDomainNameForSite(9, "example.org"));
-            Assert.False(keyContainer.IsDomainNameForSite(9, "example.net"));
+            Assert.True(keyContainer.IsDomainNameAllowedForSite(9, "example.com"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(9, "example.org"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(9, "example.net"));
 
-            Assert.False(keyContainer.IsDomainNameForSite(100, "example.com"));
-            Assert.True(keyContainer.IsDomainNameForSite(100, "example.org"));
-            Assert.True(keyContainer.IsDomainNameForSite(100, "example.net"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(100, "example.com"));
+            Assert.True(keyContainer.IsDomainNameAllowedForSite(100, "example.org"));
+            Assert.True(keyContainer.IsDomainNameAllowedForSite(100, "example.net"));
+            Assert.False(keyContainer.IsDomainNameAllowedForSite(100, null));
 
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }

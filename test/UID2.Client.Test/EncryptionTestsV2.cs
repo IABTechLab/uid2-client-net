@@ -142,7 +142,6 @@ namespace UID2.Client.Test
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             var advertisingToken = _tokenBuilder.WithExpiry(expiry).Build();
-            ;
 
             var res = _client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);

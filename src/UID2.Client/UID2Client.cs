@@ -42,12 +42,12 @@ namespace UID2.Client
             return Decrypt(token, utcNow, null, false);
         }
 
-        public DecryptionResponse Decrypt(string token, string expectedDomainName)
+        public DecryptionResponse Decrypt(string token, string domainNameFromBidRequest)
         {
-            return Decrypt(token, DateTime.UtcNow, expectedDomainName, true);
+            return Decrypt(token, DateTime.UtcNow, domainNameFromBidRequest, true);
         }
 
-        public DecryptionResponse Decrypt(string token, DateTime now, string expectedDomainName, bool enableDomainNameCheck = false)
+        private DecryptionResponse Decrypt(string token, DateTime now, string domainNameFromBidRequest, bool enableDomainNameCheck)
         {
             var container = Volatile.Read(ref _container);
             if (container == null)
@@ -62,7 +62,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, expectedDomainName, _identityScope, enableDomainNameCheck);
+                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, _identityScope, enableDomainNameCheck);
             }
             catch (Exception)
             {

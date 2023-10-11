@@ -73,7 +73,7 @@ namespace UID2.Client.Test
         // if there is domain name associated with sites but we explicitly call 
         // DecryptionResponse Decrypt(string token) or DecryptionResponse Decrypt(string token, DateTime utcNow)
         // and we do not want to do domain name check
-        // the Decrypt function would still pass
+        // the Decrypt function would still decrypt successfully
         // in case DSP does not want to enable domain name check
         [Fact]
         public void TokenIsCstgDerivedNoDomainNameTest()

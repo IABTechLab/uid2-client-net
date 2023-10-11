@@ -269,8 +269,7 @@ namespace UID2.Client
                 {
                     try
                     {
-                        // Decryption will fail if the token is a CSTG-derived token.
-                        // In that case the caller would have to provide siteId as part of the EncryptionDataRequest.
+                        // if the enableDomainNameCheck param is enabled , the caller would have to provide siteId as part of the EncryptionDataRequest.
                         DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, domainName: null, identityScope, false);
                         if (!decryptedToken.Success)
                         {

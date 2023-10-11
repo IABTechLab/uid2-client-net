@@ -15,7 +15,7 @@ namespace UID2.Client
         public const int GCM_IV_LENGTH = 12;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
-        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope)
+        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope, bool enableDomainNameCheck)
         {
             if (token.Length < 4)
             {
@@ -28,24 +28,24 @@ namespace UID2.Client
 
             if (data[0] == 2)
             {
-                return DecryptV2(Convert.FromBase64String(token), keys, now, domainName);
+                return DecryptV2(Convert.FromBase64String(token), keys, now, domainName, enableDomainNameCheck);
             }
 
             if (data[1] == (int)AdvertisingTokenVersion.V3)
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, domainName, identityScope);
+                return DecryptV3(Convert.FromBase64String(token), keys, now, domainName, identityScope, enableDomainNameCheck);
             }
 
             if (data[1] == (int)AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, domainName, identityScope);
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, domainName, identityScope, enableDomainNameCheck);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
 
-        private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainName)
+        private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainName, bool enableDomainNameCheck)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
@@ -101,7 +101,7 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
 
-            if (!IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
+            if (enableDomainNameCheck && !IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
             {
                 return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
@@ -111,7 +111,7 @@ namespace UID2.Client
 
         private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now,
             string domainName,
-            IdentityScope identityScope)
+            IdentityScope identityScope, bool enableDomainNameCheck)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
@@ -178,7 +178,7 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
 
-            if (!IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
+            if (enableDomainNameCheck && !IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
             {
                 return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
             }
@@ -271,7 +271,7 @@ namespace UID2.Client
                     {
                         // Decryption will fail if the token is a CSTG-derived token.
                         // In that case the caller would have to provide siteId as part of the EncryptionDataRequest.
-                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, domainName: null, identityScope);
+                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, domainName: null, identityScope, false);
                         if (!decryptedToken.Success)
                         {
                             return EncryptionDataResponse.MakeError(EncryptionStatus.TokenDecryptFailure);

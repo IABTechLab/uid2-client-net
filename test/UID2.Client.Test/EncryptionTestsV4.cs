@@ -227,7 +227,7 @@ namespace UID2.Client.Test
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]

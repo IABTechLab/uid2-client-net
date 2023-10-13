@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UID2.Client;
 using UID2.Client.Utils;
@@ -38,7 +37,8 @@ namespace uid2_client.test
         internal static readonly Key SITE_KEY = new(SITE_KEY_ID, SITE_ID, NOW.AddDays(-10), YESTERDAY, TOMORROW,
             SITE_SECRET);
 
-        internal static readonly string EXAMPLE_UID = "ywsvDNINiZOVSsfkHpLpSJzXzhr6Jx9Z/4Q0+lsEUvM=";
+        internal const string EXAMPLE_EMAIL_RAW_UID2_V2 = "ywsvDNINiZOVSsfkHpLpSJzXzhr6Jx9Z/4Q0+lsEUvM=";
+        internal const string EXAMPLE_PHONE_RAW_UID2_V3 = "BFOsW2SkK0egqbfyiALtpti5G/cG+PcEvjkoHl56rEV8";
         internal static readonly string CLIENT_SECRET = "ioG3wKxAokmp+rERx6A4kM/13qhyolUXIu14WN16Spo=";
         internal static readonly byte[] SOME_DATA = { 1, 2, 3, 4, 5, 6 };
 

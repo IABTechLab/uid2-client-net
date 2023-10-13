@@ -12,14 +12,38 @@ namespace UID2.Client.Test
         private readonly UID2Client _client = new("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
         private readonly AdvertisingTokenBuilder _tokenBuilder = AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V3);
 
+        [Theory]
+        [InlineData(EXAMPLE_EMAIL_RAW_UID2_V2, nameof(IdentityScope.UID2), IdentityType.Email)]
+        [InlineData(EXAMPLE_PHONE_RAW_UID2_V3, nameof(IdentityScope.UID2), IdentityType.Phone)]
+        [InlineData(EXAMPLE_EMAIL_RAW_UID2_V2, nameof(IdentityScope.EUID), IdentityType.Email)]
+        [InlineData(EXAMPLE_PHONE_RAW_UID2_V3, nameof(IdentityScope.EUID), IdentityType.Phone)]
+        public void IdentityScopeAndType_TestCases(String uid, string identityScope, IdentityType? identityType)
+        {
+            var client = new UID2Client("ep", "ak", CLIENT_SECRET, Enum.Parse<IdentityScope>(identityScope));
+            var refreshResult = client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+            Assert.True(refreshResult.Success);
+
+            string advertisingToken = identityScope == "UID2"
+                ? UID2TokenGenerator.GenerateUid2TokenV3(uid, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams)
+                : UID2TokenGenerator.GenerateEuidTokenV3(uid, MASTER_KEY, SITE_ID, SITE_KEY);
+            var res = client.Decrypt(advertisingToken, NOW);
+            Assert.True(res.Success);
+            Assert.Equal(uid, res.Uid);
+            Assert.Equal(identityType, res.IdentityType);
+            Assert.Equal(3, res.AdvertisingTokenVersion);
+        }
+
         [Fact]
         public void SmokeTest()
         {
             var refreshResult = _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
+
             var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
             Assert.True(res.Success);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+            Assert.Equal(IdentityType.Email, res.IdentityType);
+            Assert.Equal(3, res.AdvertisingTokenVersion);
         }
 
         [Fact]
@@ -47,7 +71,7 @@ namespace UID2.Client.Test
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]
@@ -85,7 +109,7 @@ namespace UID2.Client.Test
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]
@@ -103,7 +127,7 @@ namespace UID2.Client.Test
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Fact]
@@ -161,7 +185,7 @@ namespace UID2.Client.Test
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);
 
             res = _client.Decrypt(advertisingToken, expiry.AddSeconds(-1));
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Fact]

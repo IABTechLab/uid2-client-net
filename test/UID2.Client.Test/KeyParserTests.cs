@@ -168,7 +168,6 @@ namespace UID2.Client.Test
             var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
             Assert.False(isDomainNameForSite);
             Assert.False(keyContainer.IsDomainNameAllowedForSite(1, null));
-
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }
 

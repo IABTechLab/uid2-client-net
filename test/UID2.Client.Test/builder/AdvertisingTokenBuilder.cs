@@ -8,7 +8,7 @@ namespace uid2_client.test.builder
     internal class AdvertisingTokenBuilder
     {
         public TokenVersion Version { get; private set; } = TokenVersion.V4;
-        public string RawUid { get; private set; } = EXAMPLE_UID;
+        public string RawUid { get; private set; } = EXAMPLE_EMAIL_RAW_UID2_V2;
         public Key MasterKey { get; private set; } = MASTER_KEY;
         public Key SiteKey { get; private set; } = SITE_KEY;
         public int SiteId => SITE_ID;

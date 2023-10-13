@@ -33,13 +33,13 @@ namespace UID2.Client
 
             if (data[1] == (int)AdvertisingTokenVersion.V3)
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, domainName, identityScope, enableDomainNameCheck);
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, enableDomainNameCheck);
             }
 
             if (data[1] == (int)AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, domainName, identityScope, enableDomainNameCheck);
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, enableDomainNameCheck);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -93,26 +93,26 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null, 2, privacyBits.IsClientSideGenerated);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, 2, privacyBits.IsClientSideGenerated);
             }
 
             if (enableDomainNameCheck && !IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, 2, privacyBits.IsClientSideGenerated);
             }
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, 2, privacyBits.IsClientSideGenerated);
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now,
-            string domainName,
-            IdentityScope identityScope, bool enableDomainNameCheck)
+        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainName,  bool enableDomainNameCheck)
         {
+            IdentityType identityType = GetIdentityType(encryptedId);
+
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             var prefix = reader.ReadByte();
@@ -170,20 +170,21 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
             }
 
             if (enableDomainNameCheck && !IsDomainNameAllowedForSite(privacyBits, siteId, domainName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion,
+                    privacyBits.IsClientSideGenerated);
             }
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, privacyBits.IsClientSideGenerated);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
         }
 
         private static bool IsDomainNameAllowedForSite(PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)
@@ -467,6 +468,18 @@ namespace UID2.Client
         private static IdentityScope DecodeIdentityScopeV3(byte value)
         {
             return (IdentityScope)((value >> 4) & 1);
+        }
+
+        private static IdentityType GetIdentityType(byte[] encryptedId)
+        {
+            // For specifics about the bitwise logic, check:
+            // Confluence - UID2-79 UID2 Token v3/v4 and Raw UID2 format v3
+            // In the base64-encoded version of encryptedId, the first character is always either A/B/E/F.
+            // After converting to binary and performing the AND operation against 1100,the result is always 0X00.
+            // So just bitshift right twice to get 000X, which results in either 0 or 1.
+            byte idType = encryptedId[0];
+            byte piiType = (byte)((idType & 0b_1100) >> 2);
+            return piiType == 0 ? IdentityType.Email : IdentityType.Phone;
         }
     }
 }

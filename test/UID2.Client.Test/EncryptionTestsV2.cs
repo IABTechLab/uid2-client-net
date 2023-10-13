@@ -18,9 +18,12 @@ namespace UID2.Client.Test
         {
             var refreshResult = _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
             Assert.True(refreshResult.Success);
+
             var res = _client.Decrypt(_tokenBuilder.Build(), NOW);
             Assert.True(res.Success);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+            Assert.Null(res.IdentityType);
+            Assert.Equal(2, res.AdvertisingTokenVersion);
         }
 
         [Fact]
@@ -48,7 +51,7 @@ namespace UID2.Client.Test
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]
@@ -86,7 +89,7 @@ namespace UID2.Client.Test
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]
@@ -104,7 +107,7 @@ namespace UID2.Client.Test
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Fact]
@@ -156,13 +159,13 @@ namespace UID2.Client.Test
             var expiry = NOW.AddDays(-60);
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
-            var advertisingToken = _tokenBuilder.WithExpiry(expiry).Build();;
+            var advertisingToken = _tokenBuilder.WithExpiry(expiry).Build();
 
             var res = _client.Decrypt(advertisingToken, expiry.AddSeconds(1));
             Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);
 
             res = _client.Decrypt(advertisingToken, expiry.AddSeconds(-1));
-            Assert.Equal(EXAMPLE_UID, res.Uid);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Fact]

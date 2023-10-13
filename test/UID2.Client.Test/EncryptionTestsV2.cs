@@ -47,7 +47,7 @@ namespace UID2.Client.Test
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, NOW, domainName);
+            var res = _client.Decrypt(advertisingToken, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
@@ -67,11 +67,29 @@ namespace UID2.Client.Test
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, NOW, domainName);
+            var res = _client.Decrypt(advertisingToken, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.DomainNameCheckFailed, res.Status);
             Assert.Null(res.Uid);
+        }
+        
+        // if there is domain name associated with sites but we explicitly call 
+        // DecryptionResponse Decrypt(string token) or DecryptionResponse Decrypt(string token, DateTime utcNow)
+        // and we do not want to do domain name check
+        // the Decrypt function would still decrypt successfully
+        // in case DSP does not want to enable domain name check
+        [Fact]
+        public void TokenIsCstgDerivedNoDomainNameTest()
+        {
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            var res = _client.Decrypt(advertisingToken);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.True(res.Success);
+            Assert.Equal(DecryptionStatus.Success, res.Status);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]
@@ -85,7 +103,7 @@ namespace UID2.Client.Test
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, NOW, domainName);
+            var res = _client.Decrypt(advertisingToken, domainName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);

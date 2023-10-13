@@ -38,7 +38,18 @@ namespace UID2.Client
         [Obsolete("Please use Decrypt(string token) instead.")]
         DecryptionResponse Decrypt(string token, DateTime utcNow);
         DecryptionResponse Decrypt(string token);
-        DecryptionResponse Decrypt(string token, string expectedDomainName);
+        /// <summary>
+        /// Decrypt advertising token to extract UID2 details and does a domain name check with the provided domainNameFromBidRequest param
+        /// for tokens from Client Side Token Generation 
+        /// </summary>
+        /// <param name="token">The UID2 Token </param>
+        /// <param name="domainNameFromBidRequest">The domain name from bid request which should match the domain name of the publisher (registered with UID2 admin)
+        /// generating this token previously using Client Side Token Generation
+        /// </param>
+        /// <returns>Response showing if decryption is successful and the resulting UID if successful.
+        /// Or it could return error codes/string indicating what went wrong (such as DecryptionStatus.DomainNameCheckFailed)
+        /// </returns>
+        DecryptionResponse Decrypt(string token, string domainNameFromBidRequest);
 
         EncryptionDataResponse Encrypt(string rawUid);
         [Obsolete("Please use Encrypt(string rawUid) instead.")]

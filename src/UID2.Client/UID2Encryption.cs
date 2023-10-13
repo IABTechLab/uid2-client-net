@@ -19,7 +19,7 @@ namespace UID2.Client
         {
             if (token.Length < 4)
             {
-                DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
 
             string headerStr = token.Substring(0, 4);

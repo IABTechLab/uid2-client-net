@@ -14,7 +14,7 @@ namespace uid2_client.test.builder
         public int SiteId => SITE_ID;
         public int PrivacyBits { get; private set; } = PrivacyBitsBuilder.Builder().WithAllFlagsDisabled().Build();
         public DateTime Expiry { get; private set; } = DateTime.UtcNow.AddHours(1);
-        public IdentityScope Scope => IdentityScope.UID2;
+        public IdentityScope Scope { get; private set; } = IdentityScope.UID2;
 
         internal static AdvertisingTokenBuilder Builder()
         {
@@ -54,6 +54,12 @@ namespace uid2_client.test.builder
         internal AdvertisingTokenBuilder WithExpiry(DateTime expiry)
         {
             Expiry = expiry;
+            return this;
+        }
+
+        internal AdvertisingTokenBuilder WithScope(IdentityScope scope)
+        {
+            Scope = scope;
             return this;
         }
 

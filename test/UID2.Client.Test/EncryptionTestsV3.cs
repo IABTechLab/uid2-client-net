@@ -9,8 +9,8 @@ namespace UID2.Client.Test
 {
     public class EncryptionTestsV3
     {
-        private readonly UID2Client _client = new("endpoint", "authkey", CLIENT_SECRET, IdentityScope.UID2);
-        private readonly AdvertisingTokenBuilder _tokenBuilder = AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V3);
+        private readonly UID2Client _client = new("endpoint", "authkey", CLIENT_SECRET, IdentityScope.EUID);
+        private readonly AdvertisingTokenBuilder _tokenBuilder = AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V3).WithScope(IdentityScope.EUID);
 
         [Theory]
         [InlineData(EXAMPLE_EMAIL_RAW_UID2_V2, nameof(IdentityScope.UID2), IdentityType.Email)]

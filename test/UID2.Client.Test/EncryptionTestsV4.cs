@@ -156,6 +156,8 @@ namespace UID2.Client.Test
             string advertisingToken = _tokenBuilder.Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
             advertisingToken = Convert.ToBase64String(UID2Base64UrlCoder.Decode(advertisingToken));
+            Assert.Contains("+", advertisingToken);
+            Assert.Contains("/", advertisingToken);
             var res = _client.Decrypt(advertisingToken, NOW);
             Assert.True(res.Success);
             Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);

@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using UID2.Client;
 using UID2.Client.Utils;
 
-namespace uid2_client.test
+namespace UID2.Client.Test
 {
     internal static class TestData
     {

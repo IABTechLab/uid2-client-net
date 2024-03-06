@@ -1,10 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using uid2_client.test.builder;
+using UID2.Client.Test.builder;
 using UID2.Client.Utils;
 using Xunit;
-using static uid2_client.test.TestData;
+using static UID2.Client.Test.TestData;
+using static UID2.Client.Test.builder.AdvertisingTokenBuilder;
 
 namespace UID2.Client.Test
 {
@@ -101,9 +102,14 @@ namespace UID2.Client.Test
             Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
-        private static void ValidateAdvertisingToken(string advertisingTokenString, IdentityScope identityScope,
-            IdentityType identityType)
+        internal static void ValidateAdvertisingToken(string advertisingTokenString, IdentityScope identityScope, IdentityType identityType, TokenVersion tokenVersion = TokenVersion.V4)
         {
+            if (tokenVersion == AdvertisingTokenBuilder.TokenVersion.V2)
+            {
+                Assert.Equal("Ag", advertisingTokenString.Substring(0, 2));
+                return;
+            }
+
             string firstChar = advertisingTokenString.Substring(0, 1);
             if (identityScope == IdentityScope.UID2)
                 Assert.Equal(identityType == IdentityType.Email ? "A" : "B", firstChar);
@@ -111,12 +117,19 @@ namespace UID2.Client.Test
                 Assert.Equal(identityType == IdentityType.Email ? "E" : "F", firstChar);
 
             string secondChar = advertisingTokenString.Substring(1, 1);
-            Assert.Equal("4", secondChar);
-
-            //No URL-unfriendly characters allowed:
-            Assert.Equal(-1, advertisingTokenString.IndexOf('='));
-            Assert.Equal(-1, advertisingTokenString.IndexOf('+'));
-            Assert.Equal(-1, advertisingTokenString.IndexOf('/'));
+            if (tokenVersion == TokenVersion.V3)
+            {
+                Assert.Equal("3", secondChar);
+                
+            }
+            else
+            {
+                Assert.Equal("4", secondChar);
+                //No URL-unfriendly characters allowed:
+                Assert.Equal(-1, advertisingTokenString.IndexOf('='));
+                Assert.Equal(-1, advertisingTokenString.IndexOf('+'));
+                Assert.Equal(-1, advertisingTokenString.IndexOf('/'));
+            }
         }
 
         private static string GenerateUid2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, UID2TokenGenerator.Params tokenGeneratorParams)

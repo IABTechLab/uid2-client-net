@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
-using uid2_client.test.builder;
+using UID2.Client.Test.builder;
 using UID2.Client.Utils;
 using Xunit;
-using static uid2_client.test.TestData;
+using static UID2.Client.Test.TestData;
 
 namespace UID2.Client.Test
 {

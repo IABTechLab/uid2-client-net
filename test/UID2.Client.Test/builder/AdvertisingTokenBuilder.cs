@@ -1,9 +1,10 @@
 ﻿using System;
 using UID2.Client;
 using UID2.Client.Utils;
-using static uid2_client.test.TestData;
+using static UID2.Client.Test.builder.AdvertisingTokenBuilder;
+using static UID2.Client.Test.TestData;
 
-namespace uid2_client.test.builder
+namespace UID2.Client.Test.builder
 {
     internal class AdvertisingTokenBuilder
     {
@@ -15,6 +16,7 @@ namespace uid2_client.test.builder
         public int PrivacyBits { get; private set; } = PrivacyBitsBuilder.Builder().WithAllFlagsDisabled().Build();
         public DateTime Expiry { get; private set; } = DateTime.UtcNow.AddHours(1);
         public IdentityScope Scope { get; private set; } = IdentityScope.UID2;
+        public DateTime Generated { get; private set; } = DateTime.UtcNow;
 
         internal static AdvertisingTokenBuilder Builder()
         {
@@ -63,17 +65,37 @@ namespace uid2_client.test.builder
             return this;
         }
 
+        internal AdvertisingTokenBuilder WithGenerated(DateTime generated)
+        {
+            Generated = generated;
+            return this;
+        }
+
+
         internal string Build()
         {
-            var encryptParams = new UID2TokenGenerator.Params().WithPrivacyBits(PrivacyBits).WithTokenExpiry(Expiry);
+            var encryptParams = new UID2TokenGenerator.Params().WithPrivacyBits(PrivacyBits).WithTokenExpiry(Expiry).WithTokenGenerated(Generated);
             encryptParams.IdentityScope = (int) Scope;
-            return Version switch
+
+            var token = Version switch
             {
                 TokenVersion.V2 => UID2TokenGenerator.GenerateUid2TokenV2(RawUid, MasterKey, SiteId, SiteKey, encryptParams),
                 TokenVersion.V3 => UID2TokenGenerator.GenerateUid2TokenV3(RawUid, MasterKey, SiteId, SiteKey, encryptParams),
                 TokenVersion.V4 => UID2TokenGenerator.GenerateUid2TokenV4(RawUid, MasterKey, SiteId, SiteKey, encryptParams),
                 _ => throw new ArgumentOutOfRangeException()
             };
+
+            var identityType = IdentityType.Email;
+            if (Version != TokenVersion.V2)
+            {
+                var firstChar = RawUid.Substring(0, 1);
+                if (firstChar == "F" || firstChar == "B")
+                    identityType = IdentityType.Phone;
+            }
+
+
+            EncryptionTestsV4.ValidateAdvertisingToken(token, Scope, identityType, Version);
+            return token;
         }
 
         internal enum TokenVersion

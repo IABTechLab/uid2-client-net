@@ -20,6 +20,10 @@ namespace UID2.Client
         private readonly int _masterKeysetId;
         private readonly int _defaultKeysetId;
         private readonly long _tokenExpirySeconds;
+        private readonly long _maxBidstreamLifetimeSeconds;
+        private readonly long _maxSharingLifetimeSeconds;
+        private readonly long _allowClockSkewSeconds;
+        private readonly IdentityScope _identityScope;
 
         internal KeyContainer(List<Key> keys)
         {   //legacy /key/latest
@@ -49,13 +53,16 @@ namespace UID2.Client
             }
         }
 
-        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys, IEnumerable<Site> sites)
+        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys, IEnumerable<Site> sites, IdentityScope identityScope, long maxBidstreamLifetimeSeconds, long maxSharingLifetimeSeconds, long allowClockSkewSeconds)
         {   //key/sharing
             _callerSiteId = callerSiteId;
             _masterKeysetId = masterKeysetId;
             _defaultKeysetId = defaultKeysetId;
             _tokenExpirySeconds = tokenExpirySeconds;
-
+            _identityScope = identityScope;
+            _maxBidstreamLifetimeSeconds = maxBidstreamLifetimeSeconds;
+            _maxSharingLifetimeSeconds = maxSharingLifetimeSeconds;
+            _allowClockSkewSeconds = allowClockSkewSeconds;
 
             _keys = new Dictionary<long, Key>(keys.Count);
             foreach (var key in keys)
@@ -83,6 +90,7 @@ namespace UID2.Client
             }
 
             this._siteIdToSite = sites.ToDictionary(site => site.Id, site => site);
+            _identityScope = identityScope;
         }
 
         public bool IsValid(DateTime asOf)
@@ -159,8 +167,16 @@ namespace UID2.Client
             return TryGetLatestKey(siteKeys, now, out key);
         }
 
+        internal IdentityScope GetIdentityScope()
+        {
+            return _identityScope;
+        }
+
         public int CallerSiteId => _callerSiteId;
         public long TokenExpirySeconds => _tokenExpirySeconds;
+        public long MaxBidstreamLifetimeSeconds => _maxBidstreamLifetimeSeconds;
+        public long MaxSharingLifetimeSeconds => _maxSharingLifetimeSeconds;
+        public long AllowClockSkewSeconds => _allowClockSkewSeconds;
 
     }
 }

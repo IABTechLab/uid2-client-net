@@ -1,8 +1,8 @@
-﻿using uid2_client.test.builder;
+﻿using UID2.Client.Test.builder;
 using UID2.Client;
 using Xunit;
 
-namespace uid2_client.test
+namespace UID2.Client.Test
 {
     public abstract class PrivacyBitsTests
     {

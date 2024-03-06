@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 
-namespace uid2_client.test.builder
+namespace UID2.Client.Test.builder
 {
     public class PrivacyBitsBuilder
     {

@@ -25,4 +25,5 @@ jobs:
     with:
       release_type: ${{ inputs.release_type }}
       dotnet_version: ${{ inputs.dotnet_version }}
+      nuget_api_key: ${{ secrets.NUGET_API_KEY }}
     secrets: inherit

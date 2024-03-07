@@ -53,16 +53,16 @@ namespace UID2.Client
             return UID2Encryption.Encrypt(rawUid, container, container.IdentityScope, now);
         }
 
-        internal RefreshResponse Refresh()
+        internal RefreshResponse Refresh(string urlSuffix)
         {
-            return RefreshInternal().Result;
+            return RefreshInternal(urlSuffix).Result;
         }
 
-        private async Task<RefreshResponse> RefreshInternal()
+        private async Task<RefreshResponse> RefreshInternal(string urlSuffix)
         {
             try
             {
-                var results = await _uid2ClientHelper.PostRequest("/v2/key/sharing");
+                var results = await _uid2ClientHelper.PostRequest(urlSuffix);
                 Volatile.Write(ref _container, KeyParser.Parse(results.responseString));
                 return RefreshResponse.MakeSuccess();
             }

@@ -25,7 +25,7 @@ namespace UID2.Client
 
         public RefreshResponse Refresh()
         {
-            return _tokenHelper.Refresh();
+            return _tokenHelper.Refresh("/v2/key/bidstream");
         }
 
         internal RefreshResponse RefreshJson(string json)

@@ -34,7 +34,7 @@ namespace UID2.Client
 
         public RefreshResponse Refresh()
         {
-            return _tokenHelper.Refresh();
+            return _tokenHelper.Refresh("/v2/key/sharing");
         }
 
         internal RefreshResponse RefreshJson(string json)

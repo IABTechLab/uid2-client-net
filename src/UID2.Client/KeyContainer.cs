@@ -51,7 +51,7 @@ namespace UID2.Client
         }
 
         internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys, IEnumerable<Site> sites, IdentityScope identityScope, long maxBidstreamLifetimeSeconds, long maxSharingLifetimeSeconds, long allowClockSkewSeconds)
-        {   //key/sharing
+        {   //key/sharing or /key/bidstream
             _callerSiteId = callerSiteId;
             _masterKeysetId = masterKeysetId;
             _defaultKeysetId = defaultKeysetId;

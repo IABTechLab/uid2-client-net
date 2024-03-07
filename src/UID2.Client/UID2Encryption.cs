@@ -271,6 +271,7 @@ namespace UID2.Client
                 string advertisingToken = (identityScope == IdentityScope.UID2)
                     ? UID2TokenGenerator.GenerateUid2TokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams)
                     : UID2TokenGenerator.GenerateEuidTokenV4(rawUid, masterKey, keys.CallerSiteId, defaultKey, encryptParams);
+#pragma warning restore CS0618 //warning CS0618: 'UID2TokenGenerator' is obsolete: 'This class shouldn't be used outside of the SDK and will be made internal in a future release'
                 return EncryptionDataResponse.MakeSuccess(advertisingToken);
             }
             catch (Exception)

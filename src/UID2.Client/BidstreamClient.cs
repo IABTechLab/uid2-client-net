@@ -5,7 +5,7 @@ namespace UID2.Client
 {
     public class BidstreamClient
     {
-        private TokenHelper _tokenHelper;
+        private readonly TokenHelper _tokenHelper;
 
         public BidstreamClient(string endpoint, string authKey, string secretKey)
         {
@@ -14,8 +14,14 @@ namespace UID2.Client
 
         public DecryptionResponse DecryptTokenIntoRawUid(string token, string domainNameFromBidRequest)
         {
-            return _tokenHelper.Decrypt(token, DateTime.UtcNow, domainNameFromBidRequest, ClientType.Bidstream);
+            return DecryptTokenIntoRawUid(token, domainNameFromBidRequest, DateTime.UtcNow);
         }
+
+        internal DecryptionResponse DecryptTokenIntoRawUid(string token, string domainNameFromBidRequest, DateTime utcNow)
+        {
+            return _tokenHelper.Decrypt(token, utcNow, domainNameFromBidRequest, ClientType.Bidstream);
+        }
+
 
         public RefreshResponse Refresh()
         {

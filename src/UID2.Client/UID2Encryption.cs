@@ -24,7 +24,7 @@ namespace UID2.Client
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 
-    internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope, ClientType clientType)
+        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope, ClientType clientType)
         {
             if (token.Length < 4)
             {
@@ -225,7 +225,7 @@ namespace UID2.Client
             if ((expiry - established).TotalSeconds > maxLifetimeSeconds)
                 return false;
 
-            return (established - now).TotalSeconds <= allowClockSkewSeconds;
+            return (established - now).TotalSeconds <= allowClockSkewSeconds; //returns false if token generated too far in the future
         }
 
         private static bool IsDomainNameAllowedForSite(ClientType clientType, PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)

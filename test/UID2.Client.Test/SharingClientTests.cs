@@ -96,7 +96,7 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
-        private void TokenGeneratedInTheFuture(IdentityScope identityScope, TokenVersion tokenVersion)
+        private void TokenGeneratedInTheFutureToSimulateClockSkew(IdentityScope identityScope, TokenVersion tokenVersion)
         {
             var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
             Assert.True(refreshResult.Success);
@@ -114,7 +114,7 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
-        private void TokenGeneratedInTheFutureWithinAllowedSkew(IdentityScope identityScope, TokenVersion tokenVersion)
+        private void TokenGeneratedInTheFutureWithinAllowedClockSkew(IdentityScope identityScope, TokenVersion tokenVersion)
         {
             var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
             Assert.True(refreshResult.Success);
@@ -141,8 +141,7 @@ namespace UID2.Client.Test
             Assert.True(res.Success);
             Assert.Equal(rawUidPhone, res.Uid);
             Assert.Equal((int)tokenVersion + 2, res.AdvertisingTokenVersion);
-            if (tokenVersion != TokenVersion.V2)
-                Assert.Equal(IdentityType.Phone, res.IdentityType);
+            Assert.Equal(IdentityType.Phone, res.IdentityType);
         }
 
         [Theory]
@@ -199,6 +198,221 @@ namespace UID2.Client.Test
             var res = client.Decrypt(advertisingToken);
             BidstreamClientTests.AssertSuccess(res, tokenVersion);
         }
+
+
+        // tests below taken from EncryptionTestsV4.cs under "//  Sharing tests" comment and modified to use SharingClient and the new JSON /key/sharing response
+        private SharingClient SharingSetupAndEncrypt(out string advertisingToken)
+        {
+            var json = KeySetToJsonForSharing(new [] {MASTER_KEY, SITE_KEY});
+            var refreshResult = _client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            advertisingToken = SharingEncrypt(_client);
+
+            return _client;
+        }
+
+        private string SharingEncrypt(SharingClient client)
+        {
+            var encrypted = client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+            return encrypted.EncryptedData;
+        }
+
+        [Fact]
+        public void CanEncryptAndDecryptForSharing()
+        {
+            var client = SharingSetupAndEncrypt(out string advertisingToken);
+
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken);
+            Assert.True(res.Success);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
+
+        [Fact]
+        public void CanDecryptAnotherClientsEncryptedToken()
+        {
+            var sendingClient = SharingSetupAndEncrypt(out string advertisingToken);
+
+            var receivingClient = new SharingClient("endpoint2", "authkey2", "random secret");
+            var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, IdentityScope.UID2, callerSiteId: 4874, defaultKeysetId: 12345);
+
+            var refreshResult = receivingClient.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            var res = receivingClient.DecryptTokenIntoRawUid(advertisingToken);
+            Assert.True(res.Success);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
+
+        [Fact]
+        public void SharingTokenIsV4()
+        {
+            var client = SharingSetupAndEncrypt(out string advertisingToken);
+
+            char[] base64SpecialChars = { '+', '/', '=' };
+            Boolean containsBase64SpecialChars = advertisingToken.IndexOfAny(base64SpecialChars) != -1;
+            Assert.False(containsBase64SpecialChars);
+        }
+
+        [Fact]
+        public void Uid2ClientProducesUid2Token()
+        {
+            var client = SharingSetupAndEncrypt(out string advertisingToken);
+
+            Assert.Equal("A", advertisingToken.Substring(0, 1));
+        }
+
+
+        [Fact]
+        public void EuidClientProducesEuidToken()
+        {
+            var client = new SharingClient("endpoint", "authkey", CLIENT_SECRET);
+            var json = KeySetToJsonForSharing(new [] {MASTER_KEY, SITE_KEY}, IdentityScope.EUID);
+            var refreshResult = client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            string advertisingToken = SharingEncrypt(client);
+
+            Assert.Equal("E", advertisingToken.Substring(0, 1));
+        }
+
+        [Fact]
+        public void RawUidProducesCorrectIdentityTypeInToken()
+        {
+            var json = KeySetToJsonForSharing(new [] {MASTER_KEY, SITE_KEY});
+            var refreshResult = _client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            //see UID2-79+Token+and+ID+format+v3 . Also note EUID does not support v2 or phone
+            Assert.Equal(IdentityType.Email,
+                GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=",
+                    _client)); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
+            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ", _client)); //v3 +12345678901
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=", _client)); //v2 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 EUID test@example.com
+        }
+
+        private IdentityType GetTokenIdentityType(string rawUid, SharingClient client)
+        {
+            var encrypted = _client.EncryptRawUidIntoToken(rawUid);
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+            Assert.Equal(rawUid, _client.DecryptTokenIntoRawUid(encrypted.EncryptedData).Uid);
+
+            var firstChar = encrypted.EncryptedData.Substring(0, 1);
+            if (firstChar == "A" || firstChar == "E") //from UID2-79+Token+and+ID+format+v3
+                return IdentityType.Email;
+            else if (firstChar == "F" || firstChar == "B")
+                return IdentityType.Phone;
+
+            throw new Exception("unknown IdentityType");
+        }
+
+
+        [Fact]
+        public void MultipleKeysPerKeyset()
+        {
+            Key MASTER_KEY2 = new Key(id: 264, siteId: -1, created: NOW.AddDays(-2), activates: YESTERDAY, expires: NOW.AddHours(-1), secret: MASTER_SECRET);
+            Key SITE_KEY2 = new Key(id: 265, siteId: SITE_ID, created: NOW.AddDays(-10), activates: YESTERDAY, expires: NOW.AddHours(-1), secret: SITE_SECRET);
+
+            var json = KeySetToJsonForSharing(new [] {MASTER_KEY, MASTER_KEY2, SITE_KEY, SITE_KEY2});
+            var refreshResult = _client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            string advertisingToken = SharingEncrypt(_client);
+
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken);
+            Assert.True(res.Success);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
+
+        [Fact]
+        public void CannotEncryptIfNoKeyFromTheDefaultKeyset()
+        {
+            var json = KeySetToJsonForSharing(new[] {MASTER_KEY});
+            var refreshResult = _client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+
+        [Fact]
+        public void CannotEncryptIfTheresNoDefaultKeysetHeader()
+        {
+            var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, IdentityScope.UID2,SITE_ID);
+            var refreshResult = _client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void ExpiryInTokenMatchesExpiryInResponse()
+        {
+            var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, IdentityScope.UID2,SITE_ID, defaultKeysetId: 99999, tokenExpirySeconds: 2);
+            var refreshResult = _client.RefreshJson(json);
+            Assert.True(refreshResult.Success);
+
+            var encryptedAt = DateTime.UtcNow;
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2, encryptedAt);
+            Assert.Equal(EncryptionStatus.Success, encrypted.Status);
+
+            var res = _client.DecryptTokenIntoRawUid(encrypted.EncryptedData, encryptedAt.AddSeconds(1));
+            Assert.True(res.Success);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+
+            var futureDecryption = _client.DecryptTokenIntoRawUid(encrypted.EncryptedData, DateTime.UtcNow.AddSeconds(3));
+            Assert.Equal(DecryptionStatus.ExpiredToken, futureDecryption.Status);
+        }
+
+        [Fact]
+        public void EncryptKeyExpired()
+        {
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW, YESTERDAY, TEST_SECRET);
+            _client.RefreshJson(KeySetToJsonForSharing(new [] {MASTER_KEY, key}));
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey,
+                encrypted.Status); //note: KeyInactive was the result for EncryptData, because EncryptData allowed you to pass an expired key. In the Sharing scenario, expired and inactive keys are ignored when encrypting.
+        }
+
+        [Fact]
+        public void EncryptKeyInactive()
+        {
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, TOMORROW, IN_2_DAYS, TEST_SECRET);
+            _client.RefreshJson(KeySetToJsonForSharing(new [] {MASTER_KEY, key}));
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+
+        [Fact]
+        public void EncryptSiteKeyExpired()
+        {
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW, YESTERDAY, TEST_SECRET);
+            _client.RefreshJson(KeySetToJsonForSharing(new [] {MASTER_KEY, key}));
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+        [Fact]
+        public void EncryptSiteKeyInactive()
+        {
+            Key key = new Key(SITE_KEY_ID, SITE_ID, NOW, TOMORROW, IN_2_DAYS, TEST_SECRET);
+            _client.RefreshJson(KeySetToJsonForSharing(new [] {MASTER_KEY, key}));
+            var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
+            Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
+        }
+
+
+        private static string KeySetToJsonForSharing(IEnumerable<Key> keys, IdentityScope identityScope = IdentityScope.UID2)
+        {
+            return KeySharingResponse(keys, identityScope, SITE_ID, defaultKeysetId: 99999);
+        }
+
 
 
 

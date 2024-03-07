@@ -3,6 +3,7 @@
   <metadata>
     <id>UID2.Client</id>
     <version>5.5.0</version>
+    <!-- When changing the above, ensure you also change Uid2ClientHelper.cs -->
     <title>UID2 Client C# SDK</title>
     <authors>UID2 team</authors>
     <owners>UID2 team</owners>

@@ -44,7 +44,7 @@ namespace UID2.Client
                 var defaultKeysetId = body.Value<int>("default_keyset_id");
                 var maxBidstreamLifetimeSeconds = GetOrDefault(body, "max_bidstream_lifetime_seconds", long.MaxValue);
                 var maxSharingLifetimeSeconds = GetOrDefault(body, "max_sharing_lifetime_seconds", long.MaxValue);
-                var allowClockSkewSeconds = body.Value<long>("allow_clock_skew_seconds");
+                var allowClockSkewSeconds = GetOrDefault(body, "allow_clock_skew_seconds", 1800);
                 var identityScope = body.Value<string>("identity_scope") == "EUID" ? IdentityScope.EUID : IdentityScope.UID2;
 
                 var tokenExpirySeconds = body.Value<long>("token_expiry_seconds");

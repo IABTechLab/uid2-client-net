@@ -13,12 +13,23 @@ namespace UID2.Client
 
         public DecryptionResponse DecryptTokenIntoRawUid(string token)
         {
-            return _tokenHelper.Decrypt(token, DateTime.UtcNow, null, ClientType.Sharing);
+            return DecryptTokenIntoRawUid(token, DateTime.UtcNow);
         }
+
+        internal DecryptionResponse DecryptTokenIntoRawUid(string token, DateTime utcNow)
+        {
+            return _tokenHelper.Decrypt(token, utcNow, null, ClientType.Sharing);
+        }
+
 
         public EncryptionDataResponse EncryptRawUidIntoToken(string rawUid)
         {
-            return _tokenHelper.Encrypt(rawUid, DateTime.UtcNow);
+            return EncryptRawUidIntoToken(rawUid, DateTime.UtcNow);
+        }
+
+        internal EncryptionDataResponse EncryptRawUidIntoToken(string rawUid, DateTime utcNow)
+        {
+            return _tokenHelper.Encrypt(rawUid, utcNow);
         }
 
         public RefreshResponse Refresh()

@@ -13,8 +13,9 @@ namespace UID2.Client.Test
     public class BidstreamClientTests
     {
         private readonly BidstreamClient _client = new("endpoint", "authkey", CLIENT_SECRET);
+        private readonly AdvertisingTokenBuilder _tokenBuilder = AdvertisingTokenBuilder.Builder().WithVersion(AdvertisingTokenBuilder.TokenVersion.V4);
 
-        private static string KeyBidstreamResponse(IEnumerable<Key> keys, IdentityScope identityScope)
+        private static string KeyBidstreamResponse(IEnumerable<Key> keys, IdentityScope identityScope = IdentityScope.UID2)
         {
             var keyToJson = (Key key) => new
             {
@@ -29,7 +30,7 @@ namespace UID2.Client.Test
             {
                 body = new
                 {
-                    max_bidstream_lifetime_seconds = 3 * 24 * 60 * 60, //3 days
+                    max_bidstream_lifetime_seconds = TimeSpan.FromDays(3).TotalSeconds,
                     identity_scope = identityScope.ToString(),
                     allow_clock_skew_seconds = 1800, //30 mins
                     keys = keys.Select(keyToJson).ToArray(),
@@ -111,8 +112,7 @@ namespace UID2.Client.Test
             Assert.True(res.Success);
             Assert.Equal(rawUidPhone, res.Uid);
             Assert.Equal((int)tokenVersion + 2, res.AdvertisingTokenVersion);
-            if (tokenVersion != TokenVersion.V2)
-                Assert.Equal(IdentityType.Phone, res.IdentityType);
+            Assert.Equal(IdentityType.Phone, res.IdentityType);
         }
 
         [Theory]
@@ -140,7 +140,7 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
-        private void TokenGeneratedInTheFuture(IdentityScope identityScope, TokenVersion tokenVersion)
+        private void TokenGeneratedInTheFutureToSimulateClockSkew(IdentityScope identityScope, TokenVersion tokenVersion)
         {
             var refreshResult = _client.RefreshJson(KeyBidstreamResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
             Assert.True(refreshResult.Success);
@@ -159,7 +159,7 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
-        private void TokenGeneratedInTheFutureWithinAllowedSkew(IdentityScope identityScope, TokenVersion tokenVersion)
+        private void TokenGeneratedInTheFutureWithinAllowedClockSkew(IdentityScope identityScope, TokenVersion tokenVersion)
         {
             var refreshResult = _client.RefreshJson(KeyBidstreamResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
             Assert.True(refreshResult.Success);
@@ -225,7 +225,166 @@ namespace UID2.Client.Test
             AssertSuccess(res, tokenVersion);
         }
 
+        // tests below taken from EncryptionTestsV4.cs above "//  Sharing tests" comment (but excluding deprecated EncryptData/DecryptData methods) and modified to use BidstreamClient and the new JSON /key/bidstream response
+        [Theory]
+        [InlineData(EXAMPLE_EMAIL_RAW_UID2_V2, IdentityScope.UID2, IdentityType.Email)]
+        [InlineData(EXAMPLE_PHONE_RAW_UID2_V3, IdentityScope.UID2, IdentityType.Phone)]
+        [InlineData(EXAMPLE_EMAIL_RAW_UID2_V2, IdentityScope.EUID, IdentityType.Email)]
+        [InlineData(EXAMPLE_PHONE_RAW_UID2_V3, IdentityScope.EUID, IdentityType.Phone)]
+        private void IdentityScopeAndType_TestCases(String uid, IdentityScope identityScope, IdentityType? identityType)
+        {
+            var client = new BidstreamClient("ep", "ak", CLIENT_SECRET);
+            var refreshResult = client.RefreshJson(KeyBidstreamResponse(new [] {MASTER_KEY, SITE_KEY}, identityScope));
+            Assert.True(refreshResult.Success);
 
+            string advertisingToken = identityScope == IdentityScope.UID2
+                ? UID2TokenGenerator.GenerateUid2TokenV4(uid, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams)
+                : UID2TokenGenerator.GenerateEuidTokenV4(uid, MASTER_KEY, SITE_ID, SITE_KEY, UID2TokenGenerator.DefaultParams);
+            var res = client.DecryptTokenIntoRawUid(advertisingToken, null, NOW);
+            Assert.True(res.Success);
+            Assert.Equal(uid, res.Uid);
+            Assert.Equal(identityType, res.IdentityType);
+            Assert.Equal(4, res.AdvertisingTokenVersion);
+        }
+
+        private static void ValidateAdvertisingToken(string advertisingTokenString, IdentityScope identityScope, IdentityType identityType, TokenVersion tokenVersion = TokenVersion.V4)
+        {
+            EncryptionTestsV4.ValidateAdvertisingToken(advertisingTokenString, identityScope, identityType, tokenVersion);
+        }
+
+
+        [Fact]
+        public void UserOptedOutTest()
+        {
+            _client.RefreshJson(KeyBidstreamResponse(new [] {MASTER_KEY, SITE_KEY}));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithOptedOut(true).Build();
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, null);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.UserOptedOut, res.Status);
+            Assert.Null(res.Uid);
+        }
+
+        [Theory]
+        // These are the domains associated with site SITE_ID, as defined by KeySharingResponse();
+        [InlineData("example.com")]
+        [InlineData("example.org")]
+        public void TokenIsCstgDerivedTest(string domainName)
+        {
+            _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.True(res.Success);
+            Assert.Equal(DecryptionStatus.Success, res.Status);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
+
+        [Theory]
+        [InlineData((string)null)]
+        [InlineData("")]
+        // Domains associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("example.net")]
+        [InlineData("example.edu")]
+        // Domain not associated with any site.
+        [InlineData("foo.com")]
+        public void TokenIsCstgDerivedDomainNameFailTest(string domainName)
+        {
+            _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.DomainNameCheckFailed, res.Status);
+            Assert.Null(res.Uid);
+        }
+
+        [Theory]
+        // Any domain name is OK, because the token is not client-side generated.
+        [InlineData((string)null)]
+        [InlineData("")]
+        [InlineData("example.com")]
+        [InlineData("foo.com")]
+        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName)
+        {
+            _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            Assert.False(res.IsClientSideGenerated);
+            Assert.True(res.Success);
+            Assert.Equal(DecryptionStatus.Success, res.Status);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
+
+        [Fact]
+        public void EmptyKeyContainer()
+        {
+            string advertisingToken = _tokenBuilder.Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, null);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.NotInitialized, res.Status);
+        }
+
+        [Fact]
+        public void ExpiredKeyContainer()
+        {
+            string advertisingToken = _tokenBuilder.Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+
+            Key masterKeyExpired = new Key(MASTER_KEY_ID, -1, NOW, NOW.AddHours(-2), NOW.AddHours(-1), MASTER_SECRET);
+            Key siteKeyExpired = new Key(SITE_KEY_ID, SITE_ID, NOW, NOW.AddHours(-2), NOW.AddHours(-1), SITE_SECRET);
+            _client.RefreshJson(KeyBidstreamResponse(new[] { masterKeyExpired, siteKeyExpired}));
+
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, null);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.KeysNotSynced, res.Status);
+        }
+
+        [Fact]
+        public void NotAuthorizedForMasterKey()
+        {
+            Key anotherMasterKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 1, -1, NOW, NOW, NOW.AddHours(1), MASTER_SECRET);
+            Key anotherSiteKey = new Key(MASTER_KEY_ID + SITE_KEY_ID + 2, SITE_ID, NOW, NOW, NOW.AddHours(1), SITE_SECRET);
+            _client.RefreshJson(KeyBidstreamResponse(new[] { anotherMasterKey, anotherSiteKey}));
+
+            var res = _client.DecryptTokenIntoRawUid(_tokenBuilder.Build(), null);
+            Assert.Equal(DecryptionStatus.NotAuthorizedForMasterKey, res.Status);
+        }
+
+        [Fact]
+        public void InvalidPayload()
+        {
+            byte[] payload = UID2Base64UrlCoder.Decode(_tokenBuilder.Build());
+            var advertisingToken = UID2Base64UrlCoder.Encode(payload.SkipLast(1).ToArray());
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+
+            _client.RefreshJson(KeyBidstreamResponse(new[] { MASTER_KEY, SITE_KEY}));
+
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, null);
+            Assert.Equal(DecryptionStatus.InvalidPayload, res.Status);
+        }
+
+        [Fact]
+        public void TokenExpiryAndCustomNow()
+        {
+            var expiry = NOW.AddDays(-60);
+            _client.RefreshJson(KeyBidstreamResponse(new[] { MASTER_KEY, SITE_KEY}));
+            string advertisingToken = _tokenBuilder.WithGenerated(expiry.AddSeconds(-60)).WithExpiry(expiry).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, null, expiry.AddSeconds(1));
+            Assert.Equal(DecryptionStatus.ExpiredToken, res.Status);
+
+            res = _client.DecryptTokenIntoRawUid(advertisingToken, null, expiry.AddSeconds(-1));
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
 
     }
 }

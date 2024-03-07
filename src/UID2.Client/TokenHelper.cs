@@ -7,7 +7,7 @@ namespace UID2.Client
 {
     internal class TokenHelper
     {
-        private Uid2ClientHelper _uid2ClientHelper;
+        private readonly Uid2ClientHelper _uid2ClientHelper;
         private KeyContainer _container;
 
         internal TokenHelper(string endpoint, string authKey, string secretKey)
@@ -30,16 +30,12 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, container.GetIdentityScope(), clientType);
+                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, container.IdentityScope, clientType);
             }
             catch (Exception)
             {
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
-        }
-        public EncryptionDataResponse Encrypt(string rawUid)
-        {
-            return Encrypt(rawUid, DateTime.UtcNow);
         }
 
         internal EncryptionDataResponse Encrypt(string rawUid, DateTime now)
@@ -54,7 +50,7 @@ namespace UID2.Client
                 return EncryptionDataResponse.MakeError(EncryptionStatus.KeysNotSynced);
             }
 
-            return UID2Encryption.Encrypt(rawUid, container, container.GetIdentityScope(), now);
+            return UID2Encryption.Encrypt(rawUid, container, container.IdentityScope, now);
         }
 
         internal RefreshResponse Refresh()

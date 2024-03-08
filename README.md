@@ -26,6 +26,9 @@ dotnet run --project src/SampleApp/SampleApp.csproj https://integ.uidapi.com \
 	<your-api-token> <your-secret-key> <advertising-token>
 ```
 
+## Usage
+For documentation on usage, see the [UID2 SDK for C# / .NET Reference Guide](https://unifiedid.com/docs/sdks/uid2-sdk-ref-csharp-dotnet).
+
 ## Example Usage
 
 For example usage, see [src/SampleApp/Program.cs](src/SampleApp/Program.cs).

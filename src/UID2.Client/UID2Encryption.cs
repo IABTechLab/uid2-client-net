@@ -239,8 +239,7 @@ namespace UID2.Client
             return keys.IsDomainNameAllowedForSite(siteId, domainName);
         }
 
-        internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope,
-            DateTime now)
+        internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope, DateTime now)
         {
             if (keys == null)
             {
@@ -264,7 +263,7 @@ namespace UID2.Client
 
             var expiry = now.AddSeconds(keys.TokenExpirySeconds);
 #pragma warning disable CS0618 //warning CS0618: 'UID2TokenGenerator' is obsolete: 'This class shouldn't be used outside of the SDK and will be made internal in a future release'
-            var encryptParams = UID2TokenGenerator.DefaultParams.WithTokenExpiry(expiry);
+            var encryptParams = UID2TokenGenerator.DefaultParams.WithTokenGenerated(now).WithTokenExpiry(expiry);
 
             try
             {

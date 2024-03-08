@@ -1,5 +1,5 @@
-name: Build and Publish JAR Packages
-run-name: ${{ inputs.release_type == 'Snapshot' && 'Publish pre-release' || format('Release {0}', inputs.release_type)}} Package by @${{ github.actor }}
+name: Build and Publish Nuget Packages
+run-name: ${{ format('Release {0}', inputs.release_type)}} Package by @${{ github.actor }}
 on:
   workflow_dispatch:
     inputs:
@@ -19,7 +19,7 @@ on:
 
 jobs:
   build-and-pubish:
-    name: Build and publish JAR packages to Maven repository
+    name: Build and publish JAR packages to Nuget repository
     uses: IABTechLab/uid2-shared-actions/.github/workflows/shared-publish-to-nuget-versioned.yaml@v2
     with:
       release_type: ${{ inputs.release_type }}

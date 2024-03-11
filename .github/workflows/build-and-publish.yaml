@@ -19,7 +19,7 @@ on:
 
 jobs:
   build-and-pubish:
-    name: Build and publish JAR packages to Nuget repository
+    name: Build and publish nupkg to Nuget repository
     uses: IABTechLab/uid2-shared-actions/.github/workflows/shared-publish-to-nuget-versioned.yaml@v2
     with:
       release_type: ${{ inputs.release_type }}

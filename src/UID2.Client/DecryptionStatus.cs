@@ -16,6 +16,7 @@
         ///  DSPs are still expected to check their records for user opt out, even when this status is not returned
         /// </summary>
         UserOptedOut,
-        DomainNameCheckFailed
+        DomainNameCheckFailed,
+        InvalidTokenLifetime
     }
 }

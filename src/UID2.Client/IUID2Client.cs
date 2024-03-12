@@ -7,6 +7,7 @@ namespace UID2.Client
     /// <summary>
     /// Client for interacting with UID2 services.
     /// </summary>
+    [Obsolete("Please use BidstreamClient or SharingClient instead")]
     public interface IUID2Client
     {
         /// <summary>
@@ -59,6 +60,7 @@ namespace UID2.Client
         DecryptionDataResponse DecryptData(string encryptedData);
     }
 
+#pragma warning disable CS0618 //warning CS0618: 'UID2Client' is obsolete: 'Please use BidstreamClient or SharingClient instead'
     public class UID2ClientFactory
     {
         public static IUID2Client Create(string endpoint, string authKey, string secretKey)

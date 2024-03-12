@@ -1,10 +1,9 @@
 ﻿using System;
-using UID2.Client;
 using Xunit;
-using static uid2_client.test.builder.AdvertisingTokenBuilder;
-using static uid2_client.test.TestData;
+using static UID2.Client.Test.builder.AdvertisingTokenBuilder;
+using static UID2.Client.Test.TestData;
 
-namespace uid2_client.test.builder
+namespace UID2.Client.Test.builder
 {
     public class AdvertisingTokenBuilderTest
     {
@@ -45,7 +44,7 @@ namespace uid2_client.test.builder
         
         public class BuilderSetterTests
         {
-            private readonly Key _someKey = new(75, 10, DateTime.Now.AddSeconds(42), DateTime.Now.AddHours(42), DateTime.Now.AddDays(42), MASTER_SECRET);
+            private readonly Key _someKey = new(75, 10, DateTime.UtcNow.AddSeconds(42), DateTime.UtcNow.AddHours(42), DateTime.UtcNow.AddDays(42), MASTER_SECRET);
             
             [Fact]
             public void Version()
@@ -95,7 +94,7 @@ namespace uid2_client.test.builder
             [Fact]
             public void Expiry()
             {
-                var expiry = DateTime.Now.AddHours(42);
+                var expiry = DateTime.UtcNow.AddHours(42);
                 var builder = Builder().WithExpiry(expiry);
                 Assert.Equal(expiry, builder.Expiry);
             }

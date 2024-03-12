@@ -1,10 +1,11 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
-using uid2_client.test.builder;
+using UID2.Client.Test.builder;
 using UID2.Client.Utils;
 using Xunit;
-using static uid2_client.test.TestData;
+using static UID2.Client.Test.TestData;
+using static UID2.Client.Test.builder.AdvertisingTokenBuilder;
 
 namespace UID2.Client.Test
 {
@@ -101,9 +102,14 @@ namespace UID2.Client.Test
             Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
-        private static void ValidateAdvertisingToken(string advertisingTokenString, IdentityScope identityScope,
-            IdentityType identityType)
+        internal static void ValidateAdvertisingToken(string advertisingTokenString, IdentityScope identityScope, IdentityType identityType, TokenVersion tokenVersion = TokenVersion.V4)
         {
+            if (tokenVersion == AdvertisingTokenBuilder.TokenVersion.V2)
+            {
+                Assert.Equal("Ag", advertisingTokenString.Substring(0, 2));
+                return;
+            }
+
             string firstChar = advertisingTokenString.Substring(0, 1);
             if (identityScope == IdentityScope.UID2)
                 Assert.Equal(identityType == IdentityType.Email ? "A" : "B", firstChar);
@@ -111,12 +117,19 @@ namespace UID2.Client.Test
                 Assert.Equal(identityType == IdentityType.Email ? "E" : "F", firstChar);
 
             string secondChar = advertisingTokenString.Substring(1, 1);
-            Assert.Equal("4", secondChar);
-
-            //No URL-unfriendly characters allowed:
-            Assert.Equal(-1, advertisingTokenString.IndexOf('='));
-            Assert.Equal(-1, advertisingTokenString.IndexOf('+'));
-            Assert.Equal(-1, advertisingTokenString.IndexOf('/'));
+            if (tokenVersion == TokenVersion.V3)
+            {
+                Assert.Equal("3", secondChar);
+                
+            }
+            else
+            {
+                Assert.Equal("4", secondChar);
+                //No URL-unfriendly characters allowed:
+                Assert.Equal(-1, advertisingTokenString.IndexOf('='));
+                Assert.Equal(-1, advertisingTokenString.IndexOf('+'));
+                Assert.Equal(-1, advertisingTokenString.IndexOf('/'));
+            }
         }
 
         private static string GenerateUid2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, UID2TokenGenerator.Params tokenGeneratorParams)
@@ -463,15 +476,14 @@ namespace UID2.Client.Test
 
             //see UID2-79+Token+and+ID+format+v3 . Also note EUID does not support v2 or phone
             Assert.Equal(IdentityType.Email,
-                GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=",
-                    _client)); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
-            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ", _client)); //v3 +12345678901
-            Assert.Equal(IdentityType.Email, GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=", _client)); //v2 test@example.com
-            Assert.Equal(IdentityType.Email, GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 test@example.com
-            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 EUID test@example.com
+                GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=")); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
+            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ")); //v3 +12345678901
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=")); //v2 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb")); //v3 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb")); //v3 EUID test@example.com
         }
 
-        private IdentityType GetTokenIdentityType(string rawUid, UID2Client client)
+        private IdentityType GetTokenIdentityType(string rawUid)
         {
             var encrypted = _client.Encrypt(rawUid);
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);

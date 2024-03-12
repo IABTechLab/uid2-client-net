@@ -105,6 +105,25 @@ namespace UID2.Client.Test
             Assert.Equal("DD67xF8OFmbJ1/lMPQ6fGRDbJOT4kXErrYWcKdFfCUE=", Convert.ToBase64String(key.Secret));
         }
 
+        [Fact]
+        public void ParseTokenExpirySecondsAsString()
+        {
+            var s =
+                @"{""body"": {
+                   ""caller_site_id"": 11,
+                    ""master_keyset_id"": 1,
+                    ""default_keyset_id"": 99999,
+                    ""token_expiry_seconds"": ""1728000"",
+                    ""keys"": [],
+                },
+            ""status"": ""success""}";
+
+            var keyContainer = KeyParser.Parse(s);
+
+            Assert.Equal(1728000, keyContainer.TokenExpirySeconds);
+        }
+
+
 
         [Fact]
         public void ParseErrorKeyList()

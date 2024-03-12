@@ -20,6 +20,7 @@ namespace UID2.Client
         private readonly int _masterKeysetId;
         private readonly int _defaultKeysetId;
         private readonly long _tokenExpirySeconds;
+        private readonly long _allowClockSkewSeconds;
 
         internal KeyContainer(List<Key> keys)
         {   //legacy /key/latest
@@ -49,13 +50,16 @@ namespace UID2.Client
             }
         }
 
-        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys, IEnumerable<Site> sites)
-        {   //key/sharing
+        internal KeyContainer(int callerSiteId, int masterKeysetId, int defaultKeysetId, long tokenExpirySeconds, List<Key> keys, IEnumerable<Site> sites, IdentityScope identityScope, long maxBidstreamLifetimeSeconds, long maxSharingLifetimeSeconds, long allowClockSkewSeconds)
+        {   //key/sharing or /key/bidstream
             _callerSiteId = callerSiteId;
             _masterKeysetId = masterKeysetId;
             _defaultKeysetId = defaultKeysetId;
             _tokenExpirySeconds = tokenExpirySeconds;
-
+            IdentityScope = identityScope;
+            MaxBidstreamLifetimeSeconds = maxBidstreamLifetimeSeconds;
+            MaxSharingLifetimeSeconds = maxSharingLifetimeSeconds;
+            _allowClockSkewSeconds = allowClockSkewSeconds;
 
             _keys = new Dictionary<long, Key>(keys.Count);
             foreach (var key in keys)
@@ -159,8 +163,12 @@ namespace UID2.Client
             return TryGetLatestKey(siteKeys, now, out key);
         }
 
+        internal IdentityScope IdentityScope { get; }
+        public long MaxBidstreamLifetimeSeconds { get; }
+        public long MaxSharingLifetimeSeconds { get; }
         public int CallerSiteId => _callerSiteId;
         public long TokenExpirySeconds => _tokenExpirySeconds;
+        public long AllowClockSkewSeconds => _allowClockSkewSeconds;
 
     }
 }

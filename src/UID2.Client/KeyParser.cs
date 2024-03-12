@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using UID2.Client.Utils;
 using Newtonsoft.Json.Linq;
@@ -23,7 +22,7 @@ namespace UID2.Client
         {
             var bodyToken = json["body"];
             if (bodyToken.Type == JTokenType.Array)
-            {   // key/latest response, which will become legacy
+            {   // key/latest response, which is now legacy. We can remove this block once all tests use key/sharing JSON instead
                 var body = json.Value<JArray>("body");
 
                 var keys = body.Select(i => (JObject)i).Select(item => new Key(
@@ -43,6 +42,11 @@ namespace UID2.Client
                 var callerSiteId = body.Value<int>("caller_site_id");
                 var masterKeysetId = body.Value<int>("master_keyset_id");
                 var defaultKeysetId = body.Value<int>("default_keyset_id");
+                var maxBidstreamLifetimeSeconds = GetOrDefault(body, "max_bidstream_lifetime_seconds", long.MaxValue);
+                var maxSharingLifetimeSeconds = GetOrDefault(body, "max_sharing_lifetime_seconds", long.MaxValue);
+                var allowClockSkewSeconds = GetOrDefault(body, "allow_clock_skew_seconds", 1800);
+                var identityScope = body.Value<string>("identity_scope") == "EUID" ? IdentityScope.EUID : IdentityScope.UID2;
+
                 var tokenExpirySeconds = body.Value<long>("token_expiry_seconds");
                 if (tokenExpirySeconds == 0)
                 {
@@ -67,9 +71,18 @@ namespace UID2.Client
                     sites = sitesJson.Select(SiteFromJson).ToList();
                 }
 
-                return new KeyContainer(callerSiteId, masterKeysetId, defaultKeysetId, tokenExpirySeconds, keys, sites);
+                return new KeyContainer(callerSiteId, masterKeysetId, defaultKeysetId, tokenExpirySeconds, keys, sites, identityScope, maxBidstreamLifetimeSeconds, maxSharingLifetimeSeconds, allowClockSkewSeconds);
             }
         }
+
+        private static long GetOrDefault(JObject obj, string key, long defaultVal)
+        {
+            if (obj.TryGetValue(key, StringComparison.OrdinalIgnoreCase, out var jToken))
+                return jToken.Value<long>();
+            return defaultVal;
+        }
+
+
 
         private static bool TryGetSitesJson(JObject obj, out JArray value)
         {

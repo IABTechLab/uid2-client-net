@@ -2,13 +2,13 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Reflection; //Assembly.GetEntryAssembly()
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace UID2.Client
 {
+    [Obsolete("Please use BidstreamClient or SharingClient instead")]
     internal class UID2Client : IUID2Client
     {
         public static readonly HttpMethod RefreshHttpMethod = HttpMethod.Post;
@@ -34,20 +34,20 @@ namespace UID2.Client
 
         public DecryptionResponse Decrypt(string token)
         {
-            return Decrypt(token, DateTime.UtcNow, null, false);
+            return Decrypt(token, DateTime.UtcNow, null, ClientType.LegacyWithoutDomainCheck);
         }
 
         public DecryptionResponse Decrypt(string token, DateTime utcNow)
         {
-            return Decrypt(token, utcNow, null, false);
+            return Decrypt(token, utcNow, null, ClientType.LegacyWithoutDomainCheck);
         }
 
         public DecryptionResponse Decrypt(string token, string domainNameFromBidRequest)
         {
-            return Decrypt(token, DateTime.UtcNow, domainNameFromBidRequest, true);
+            return Decrypt(token, DateTime.UtcNow, domainNameFromBidRequest, ClientType.LegacyWithDomainCheck);
         }
 
-        private DecryptionResponse Decrypt(string token, DateTime now, string domainNameFromBidRequest, bool enableDomainNameCheck)
+        private DecryptionResponse Decrypt(string token, DateTime now, string domainNameFromBidRequest, ClientType clientType)
         {
             var container = Volatile.Read(ref _container);
             if (container == null)
@@ -62,7 +62,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, _identityScope, enableDomainNameCheck);
+                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, _identityScope, clientType);
             }
             catch (Exception)
             {
@@ -132,17 +132,11 @@ namespace UID2.Client
             return await RefreshInternal(token).ConfigureAwait(false);
         }
 
-        private string GetAssemblyNameAndVersion()
-        {
-            var version = "5.4.9";
-            return "uid-client-net-" + version;
-        }
-
         private async Task<RefreshResponse> RefreshInternal(CancellationToken token)
         {
             var request = new HttpRequestMessage(RefreshHttpMethod, _endpoint + "/v2/key/sharing");
             request.Headers.Add("Authorization", $"Bearer {_authKey}");
-            request.Headers.Add("X-UID2-Client-Version", $"{GetAssemblyNameAndVersion()}");
+            request.Headers.Add("X-UID2-Client-Version", $"{Uid2ClientHelper.GetAssemblyNameAndVersion()}");
             HttpStatusCode? statusCode = null;
             try
             {

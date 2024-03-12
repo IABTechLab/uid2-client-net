@@ -8,17 +8,19 @@ using System.Text;
 
 namespace UID2.Client.Utils
 {
-    [Obsolete("This class shouldn't be used outside of the SDK and will be made internal in the future releases")]
+    [Obsolete("This class shouldn't be used outside of the SDK and will be made internal in a future release")]
     public static class UID2TokenGenerator
     {
         public class Params
         {
             public DateTime TokenExpiry = DateTime.UtcNow.AddHours(1);
             public int PrivacyBits = 0;
+            public DateTime TokenGenerated =  DateTime.UtcNow;
 
             public Params() { }
             public Params WithTokenExpiry(DateTime expiry) { TokenExpiry = expiry; return this; }
             public Params WithPrivacyBits(int privacyBits) { PrivacyBits = privacyBits; return this; }
+            public Params WithTokenGenerated(DateTime generated) { TokenGenerated = generated; return this; }
 
             public int IdentityScope = (int)UID2.Client.IdentityScope.UID2;
         }
@@ -48,7 +50,7 @@ namespace UID2.Client.Utils
             identityWriter.Write(uidBytes.Length);
             identityWriter.Write(uidBytes);
             identityWriter.Write(encryptParams.PrivacyBits);
-            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow));
+            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated));
             byte[] identityIv = new byte[16];
             ThreadSafeRandom.PerThread.NextBytes(identityIv);
             byte[] encryptedIdentity = Encrypt(identityStream.ToArray(), identityIv, siteKey.Secret);
@@ -74,12 +76,12 @@ namespace UID2.Client.Utils
 
         public static string GenerateUid2TokenV3(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V3);
+            return GenerateTokenV3orV4(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V3);
         }
 
         public static string GenerateUid2TokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
+            return GenerateTokenV3orV4(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
 
         public static string GenerateEuidTokenV3(string uid, Key masterKey, int siteId, Key siteKey)
@@ -88,14 +90,14 @@ namespace UID2.Client.Utils
             {
                 IdentityScope = (int) IdentityScope.EUID
             };
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V3);
+            return GenerateTokenV3orV4(uid, masterKey, siteId, siteKey, param, AdvertisingTokenVersion.V3);
         }
         
         public static string GenerateEuidTokenV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams)
         {
             encryptParams.IdentityScope = (int)IdentityScope.EUID;
 
-            return GenerateUid2TokenWithDebugInfo(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
+            return GenerateTokenV3orV4(uid, masterKey, siteId, siteKey, encryptParams, AdvertisingTokenVersion.V4);
         }
 
         /// <summary>
@@ -108,8 +110,7 @@ namespace UID2.Client.Utils
         /// <param name="encryptParams"></param>
         /// <param name="adTokenVersion"></param>
         /// <returns>the encrypted UID in the form of UID2 Token</returns>
-        private static string GenerateUid2TokenWithDebugInfo(string uid, Key masterKey, int siteId, Key siteKey,
-            Params encryptParams, AdvertisingTokenVersion adTokenVersion)
+        private static string GenerateTokenV3orV4(string uid, Key masterKey, int siteId, Key siteKey, Params encryptParams, AdvertisingTokenVersion adTokenVersion)
         {
             var sitePayload = new MemoryStream();
             var sitePayloadWriter = new BigEndianByteWriter(sitePayload);
@@ -121,14 +122,14 @@ namespace UID2.Client.Utils
 
             // user identity data
             sitePayloadWriter.Write(encryptParams.PrivacyBits);
-            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // established
-            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // last refreshed
+            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); // established
+            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); // last refreshed
             sitePayloadWriter.Write(Convert.FromBase64String(uid));
 
             var masterPayload = new MemoryStream();
             var masterPayloadWriter = new BigEndianByteWriter(masterPayload);
             masterPayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenExpiry));
-            masterPayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(DateTime.UtcNow)); // token created
+            masterPayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); // token created
 
             // operator identity data
             masterPayloadWriter.Write(0); // site id

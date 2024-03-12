@@ -24,6 +24,7 @@ namespace UID2.Client.Test
                 activates = DateTimeUtils.DateTimeToEpochSeconds(key.Activates),
                 expires = DateTimeUtils.DateTimeToEpochSeconds(key.Expires),
                 secret = Convert.ToBase64String(key.Secret),
+                unexpected_key_field = "123", //ensure new fields can be handled by old SDK versions
             };
 
             var json = JObject.FromObject(new
@@ -36,7 +37,8 @@ namespace UID2.Client.Test
                     identity_scope = identityScope.ToString(),
                     allow_clock_skew_seconds = 1800, //30 mins
                     max_sharing_lifetime_seconds = 30 * 24 * 60 * 60, //30 days
-                    keys = keys.Select(keyToJson).ToArray()
+                    keys = keys.Select(keyToJson).ToArray(),
+                    unexpected_header_field = "123" //ensure new fields can be handled by old SDK versions
                 }
             });
 

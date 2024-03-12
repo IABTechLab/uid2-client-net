@@ -213,9 +213,10 @@ namespace app
                 _domain = args[4];
             }
 
-            ExampleBidStreamClient();
-            ExampleSharingClient();
-            ExampleAutoRefreshBidStreamClient();
+            ExampleBidStreamClient(); //for DSPs
+            ExampleAutoRefreshBidStreamClient(); //for DSPs
+
+            ExampleSharingClient(); //for Sharers
 
             //The following examples are all deprecated and will be removed in a future version
             //ExampleBasicRefreshDeprecated();

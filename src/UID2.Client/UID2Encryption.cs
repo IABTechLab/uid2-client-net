@@ -230,10 +230,10 @@ namespace UID2.Client
 
         private static bool IsDomainNameAllowedForSite(ClientType clientType, PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)
         {
-            if (clientType != ClientType.Bidstream && clientType != ClientType.LegacyWithDomainCheck)
+            if (!privacyBits.IsClientSideGenerated)
                 return true;
 
-            if (!privacyBits.IsClientSideGenerated)
+            if (clientType != ClientType.Bidstream && clientType != ClientType.LegacyWithDomainCheck)
                 return true;
 
             return keys.IsDomainNameAllowedForSite(siteId, domainName);

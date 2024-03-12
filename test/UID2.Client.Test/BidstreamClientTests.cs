@@ -253,13 +253,16 @@ namespace UID2.Client.Test
         }
 
 
-        [Fact]
-        public void UserOptedOutTest()
+        [Theory]
+        [InlineData(TokenVersion.V2)]
+        [InlineData(TokenVersion.V3)]
+        [InlineData(TokenVersion.V4)]
+        private void UserOptedOutTest(TokenVersion tokenVersion)
         {
             _client.RefreshJson(KeyBidstreamResponse(new [] {MASTER_KEY, SITE_KEY}));
             var privacyBits = PrivacyBitsBuilder.Builder().WithOptedOut(true).Build();
-            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
             var res = _client.DecryptTokenIntoRawUid(advertisingToken, null);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.UserOptedOut, res.Status);
@@ -268,14 +271,18 @@ namespace UID2.Client.Test
 
         [Theory]
         // These are the domains associated with site SITE_ID, as defined by KeySharingResponse();
-        [InlineData("example.com")]
-        [InlineData("example.org")]
-        public void TokenIsCstgDerivedTest(string domainName)
+        [InlineData("example.com", TokenVersion.V2)]
+        [InlineData("example.org", TokenVersion.V2)]
+        [InlineData("example.com", TokenVersion.V3)]
+        [InlineData("example.org", TokenVersion.V3)]
+        [InlineData("example.com", TokenVersion.V4)]
+        [InlineData("example.org", TokenVersion.V4)]
+        private void TokenIsCstgDerivedTest(string domainName, TokenVersion tokenVersion)
         {
             _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
-            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
             var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
@@ -284,18 +291,26 @@ namespace UID2.Client.Test
         }
 
         [Theory]
-        [InlineData((string)null)]
-        [InlineData("")]
-        // Domains associated with site SITE_ID2, as defined by KeySharingResponse().
-        [InlineData("example.net")]
-        [InlineData("example.edu")]
-        // Domain not associated with any site.
-        [InlineData("foo.com")]
-        public void TokenIsCstgDerivedDomainNameFailTest(string domainName)
+        [InlineData((string)null, TokenVersion.V2)]
+        [InlineData("", TokenVersion.V2)]
+        [InlineData("example.net", TokenVersion.V2)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("example.edu", TokenVersion.V2)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("foo.com", TokenVersion.V2)]     // Domain not associated with any site.
+        [InlineData((string)null, TokenVersion.V3)]
+        [InlineData("", TokenVersion.V3)]
+        [InlineData("example.net", TokenVersion.V3)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("example.edu", TokenVersion.V3)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("foo.com", TokenVersion.V3)]     // Domain not associated with any site.
+        [InlineData((string)null, TokenVersion.V4)]
+        [InlineData("", TokenVersion.V4)]
+        [InlineData("example.net", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("example.edu", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("foo.com", TokenVersion.V4)]     // Domain not associated with any site.
+        private void TokenIsCstgDerivedDomainNameFailTest(string domainName, TokenVersion tokenVersion)
         {
             _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
-            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
             var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.False(res.Success);
@@ -305,16 +320,24 @@ namespace UID2.Client.Test
 
         [Theory]
         // Any domain name is OK, because the token is not client-side generated.
-        [InlineData((string)null)]
-        [InlineData("")]
-        [InlineData("example.com")]
-        [InlineData("foo.com")]
-        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName)
+        [InlineData((string)null, TokenVersion.V2)]
+        [InlineData("", TokenVersion.V2)]
+        [InlineData("example.com", TokenVersion.V2)]
+        [InlineData("foo.com", TokenVersion.V2)]
+        [InlineData((string)null, TokenVersion.V3)]
+        [InlineData("", TokenVersion.V3)]
+        [InlineData("example.com", TokenVersion.V3)]
+        [InlineData("foo.com", TokenVersion.V3)]
+        [InlineData((string)null, TokenVersion.V4)]
+        [InlineData("", TokenVersion.V4)]
+        [InlineData("example.com", TokenVersion.V4)]
+        [InlineData("foo.com", TokenVersion.V4)]
+        private void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName, TokenVersion tokenVersion)
         {
             _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
-            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
             var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);

@@ -476,15 +476,14 @@ namespace UID2.Client.Test
 
             //see UID2-79+Token+and+ID+format+v3 . Also note EUID does not support v2 or phone
             Assert.Equal(IdentityType.Email,
-                GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=",
-                    _client)); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
-            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ", _client)); //v3 +12345678901
-            Assert.Equal(IdentityType.Email, GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=", _client)); //v2 test@example.com
-            Assert.Equal(IdentityType.Email, GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 test@example.com
-            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb", _client)); //v3 EUID test@example.com
+                GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=")); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
+            Assert.Equal(IdentityType.Phone, GetTokenIdentityType("BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ")); //v3 +12345678901
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("oKg0ZY9ieD/CGMEjAA0kcq+8aUbLMBG0MgCT3kWUnJs=")); //v2 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("AKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb")); //v3 test@example.com
+            Assert.Equal(IdentityType.Email, GetTokenIdentityType("EKCoNGWPYng/whjBIwANJHKvvGlGyzARtDIAk95FlJyb")); //v3 EUID test@example.com
         }
 
-        private IdentityType GetTokenIdentityType(string rawUid, UID2Client client)
+        private IdentityType GetTokenIdentityType(string rawUid)
         {
             var encrypted = _client.Encrypt(rawUid);
             Assert.Equal(EncryptionStatus.Success, encrypted.Status);

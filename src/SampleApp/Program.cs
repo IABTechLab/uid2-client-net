@@ -20,7 +20,7 @@ namespace app
             Console.Out.Flush();
         }
 
-        static void ExampleBasicRefresh()
+        static void ExampleBidStreamClient()
         {
             StartExample("Basic keys refresh and decrypt token - using BidstreamClient");
 
@@ -43,7 +43,7 @@ namespace app
         }
 
 
-        static void ExampleAutoRefresh()
+        static void ExampleAutoRefreshBidStreamClient()
         {
             StartExample("Automatic background keys refresh - using BidstreamClient");
 
@@ -72,7 +72,7 @@ namespace app
             refreshThread.Join();
         }
 
-        static void ExampleSharing()
+        static void ExampleSharingClient()
         {
             StartExample("Encrypt and Decrypt UIDs for Sharing - using SharingClient");
 
@@ -193,7 +193,6 @@ namespace app
             Console.WriteLine($"Encrypted at : {decrypted.Established}");
         }
 
-
         static int Main(string[] args)
         {
             if (args.Length < 4)
@@ -206,16 +205,17 @@ namespace app
             _authKey = args[1];
             _secretKey = args[2];
             _advertisingToken = args[3];
-            //Note: Tokens can be generated for the Integ (Test) environment using: https://example-srvonly-integ.uidapi.com/
+
+            //Note: If using the Integration environment (see https://unifiedid.com/docs/getting-started/gs-environments ), tokens can be generated using: https://example-srvonly-integ.uidapi.com/
 
             if (args.Length >= 5)
             {
                 _domain = args[4];
             }
 
-            ExampleBasicRefresh();
-            ExampleSharing();
-            ExampleAutoRefresh();
+            ExampleBidStreamClient();
+            ExampleSharingClient();
+            ExampleAutoRefreshBidStreamClient();
 
             //The following examples are all deprecated and will be removed in a future version
             //ExampleBasicRefreshDeprecated();

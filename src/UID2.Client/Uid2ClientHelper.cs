@@ -26,7 +26,7 @@ namespace UID2.Client
 
         internal static string GetAssemblyNameAndVersion()
         {
-            var version = "5.5.0";  //ensure this is kept in sync with UID2.Client.nuspec
+            var version = "5.6.0";  //ensure this is kept in sync with UID2.Client.nuspec
             return "uid-client-net-" + version;
         }
 

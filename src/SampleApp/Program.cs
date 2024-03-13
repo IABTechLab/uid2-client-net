@@ -213,6 +213,9 @@ namespace app
                 _domain = args[4];
             }
 
+            //Disable either the (ExampleBidStreamClient+ExampleAutoRefreshBidStreamClient) or ExampleSharingClient calls below depending on the permission
+            //given to your API Key
+            
             ExampleBidStreamClient(); //for DSPs
             ExampleAutoRefreshBidStreamClient(); //for DSPs
 

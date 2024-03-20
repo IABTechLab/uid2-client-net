@@ -21,12 +21,14 @@ namespace UID2.Client
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
+        // Length of a V2 token, the shortest token currently supported
+        public const int MINIMUM_TOKEN_STRING_LENGTH = 180;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 
         internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope, ClientType clientType)
         {
-            if (token.Length < 4)
+            if (token.Length < MINIMUM_TOKEN_STRING_LENGTH)
             {
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
@@ -103,23 +105,23 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
             }
 
             if (!IsDomainNameAllowedForSite(clientType, privacyBits, siteId, domainName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
             }
 
             if (!DoesTokenHaveValidLifetime(clientType, keys, established, expiry, now))
-                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
         }
 
         private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainName, ClientType clientType)
@@ -182,23 +184,23 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
             }
 
             if (!IsDomainNameAllowedForSite(clientType, privacyBits, siteId, domainName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
             }
 
             if (!DoesTokenHaveValidLifetime(clientType, keys, established, expiry, now))
-                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
         }
 
         private static bool DoesTokenHaveValidLifetime(ClientType clientType, KeyContainer keys, DateTime established, DateTime expiry, DateTime now)

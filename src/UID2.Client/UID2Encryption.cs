@@ -22,13 +22,12 @@ namespace UID2.Client
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
         // Length of a V2 token, the shortest token currently supported
-        public const int MINIMUM_TOKEN_STRING_LENGTH = 180;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 
         internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope, ClientType clientType)
         {
-            if (token.Length < MINIMUM_TOKEN_STRING_LENGTH)
+            if (token.Length < 4)
             {
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
@@ -41,16 +40,24 @@ namespace UID2.Client
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now, domainName, clientType);
             }
-
-            if (data[1] == (int)AdvertisingTokenVersion.V3)
+            else
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
-            }
+                // Assume that newer tokens have an identity scope and type prefix
+                if (!ValidIdentityScopeAndType(data[0]))
+                {
+                    return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                }
+                
+                if (data[1] == (int)AdvertisingTokenVersion.V3)
+                {
+                    return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
+                }
 
-            if (data[1] == (int)AdvertisingTokenVersion.V4)
-            {
-                //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
+                if (data[1] == (int)AdvertisingTokenVersion.V4)
+                {
+                    //same as V3 but use Base64URL encoding
+                    return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
+                }
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -58,6 +65,11 @@ namespace UID2.Client
 
         private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainName, ClientType clientType)
         {
+            if (encryptedId.Length != 133)
+            {
+                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+            }
+            
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             // version
@@ -105,29 +117,32 @@ namespace UID2.Client
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (!IsDomainNameAllowedForSite(clientType, privacyBits, siteId, domainName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (!DoesTokenHaveValidLifetime(clientType, keys, established, expiry, now))
-                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
         }
 
         private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainName, ClientType clientType)
         {
-            IdentityType identityType = GetIdentityType(encryptedId);
-
+            if (encryptedId.Length != 163 && encryptedId.Length != 164)
+            {
+                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+            }
+            
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             var prefix = reader.ReadByte();
@@ -181,26 +196,27 @@ namespace UID2.Client
             var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
             var idString = Convert.ToBase64String(id);
 
+            var identityType = DecodeIdentityType(prefix);
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (!IsDomainNameAllowedForSite(clientType, privacyBits, siteId, domainName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (!DoesTokenHaveValidLifetime(clientType, keys, established, expiry, now))
-                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, expiry, privacyBits.IsClientSideGenerated);
+            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
         }
 
         private static bool DoesTokenHaveValidLifetime(ClientType clientType, KeyContainer keys, DateTime established, DateTime expiry, DateTime now)
@@ -515,16 +531,28 @@ namespace UID2.Client
             return (IdentityScope)((value >> 4) & 1);
         }
 
-        private static IdentityType GetIdentityType(byte[] encryptedId)
+        private static bool ValidIdentityScopeAndType(byte value)
+        {
+            // 4th bit == 1 then EUID otherwise UID2
+            var identityScope = value >> 4;
+            // 2nd bit == 1 then Phone else Email
+            var identityType = (value & 0b1111) >> 2;
+
+
+            return (identityScope == (int)IdentityScope.UID2 || identityScope == (int)IdentityScope.EUID) && 
+                   (identityType == (int)IdentityType.Email || identityType == (int)IdentityType.Phone) &&
+                   // 1st and 0th bits are always 1
+                   (value & 0b11) == 0b11;
+        }
+
+        private static IdentityType DecodeIdentityType(byte value)
         {
             // For specifics about the bitwise logic, check:
             // Confluence - UID2-79 UID2 Token v3/v4 and Raw UID2 format v3
             // In the base64-encoded version of encryptedId, the first character is always either A/B/E/F.
-            // After converting to binary and performing the AND operation against 1100,the result is always 0X00.
+            // After converting to binary and performing the AND operation against 0b100,the result is always 0X00.
             // So just bitshift right twice to get 000X, which results in either 0 or 1.
-            byte idType = encryptedId[0];
-            byte piiType = (byte)((idType & 0b_1100) >> 2);
-            return piiType == 0 ? IdentityType.Email : IdentityType.Phone;
+            return (IdentityType)((value & 0b100) >> 2);
         }
     }
 }

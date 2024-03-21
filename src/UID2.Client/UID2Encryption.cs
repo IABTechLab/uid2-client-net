@@ -21,6 +21,8 @@ namespace UID2.Client
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
+        public const int TOKEN_V2_LENGTH = 133;
+        public const int TOKEN_V3_MIN_LENGTH = 163;
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 
@@ -64,7 +66,7 @@ namespace UID2.Client
 
         private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainName, ClientType clientType)
         {
-            if (encryptedId.Length != 133)
+            if (encryptedId.Length != TOKEN_V2_LENGTH)
             {
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
@@ -137,7 +139,7 @@ namespace UID2.Client
 
         private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainName, ClientType clientType)
         {
-            if (encryptedId.Length != 163 && encryptedId.Length != 164)
+            if (encryptedId.Length < TOKEN_V3_MIN_LENGTH)
             {
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
             }
@@ -540,8 +542,8 @@ namespace UID2.Client
 
             return (identityScope == (int)IdentityScope.UID2 || identityScope == (int)IdentityScope.EUID) && 
                    (identityType == (int)IdentityType.Email || identityType == (int)IdentityType.Phone) &&
-                   // 1st and 0th bits are always 1
-                   (value & 0b11) == 0b11;
+                   // 1st and 0th bits are always 1 or always 0
+                   ((value & 0b11) == 0b11 || (value & 0b11) == 0) ;
         }
 
         private static IdentityType DecodeIdentityType(byte value)

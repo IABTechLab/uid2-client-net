@@ -21,7 +21,6 @@ namespace UID2.Client
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
         public const int GCM_IV_LENGTH = 12;
-        // Length of a V2 token, the shortest token currently supported
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 

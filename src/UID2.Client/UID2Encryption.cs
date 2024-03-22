@@ -41,24 +41,16 @@ namespace UID2.Client
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now, domainName, clientType);
             }
-            else
-            {
-                // Assume that newer tokens have an identity scope and type prefix
-                if (!ValidIdentityScopeAndType(data[0]))
-                {
-                    return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
-                }
-                
-                if (data[1] == (int)AdvertisingTokenVersion.V3)
-                {
-                    return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
-                }
 
-                if (data[1] == (int)AdvertisingTokenVersion.V4)
-                {
-                    //same as V3 but use Base64URL encoding
-                    return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
-                }
+            if (data[1] == (int)AdvertisingTokenVersion.V3)
+            {
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
+            }
+
+            if (data[1] == (int)AdvertisingTokenVersion.V4)
+            {
+                //same as V3 but use Base64URL encoding
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -147,7 +139,13 @@ namespace UID2.Client
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             var prefix = reader.ReadByte();
-            if (DecodeIdentityScopeV3(prefix) != identityScope)
+            
+            if (!TryDecodeIdentityScopeAndTypeV3(prefix, out var tokenIdentityScope, out var identityType ))
+            {
+                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+            }
+
+            if (tokenIdentityScope != identityScope)
             {
                 return DecryptionResponse.MakeError(DecryptionStatus.InvalidIdentityScope);
             }
@@ -197,7 +195,6 @@ namespace UID2.Client
             var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
             var idString = Convert.ToBase64String(id);
 
-            var identityType = DecodeIdentityType(prefix);
             var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
             if (expiry < now)
             {
@@ -435,7 +432,7 @@ namespace UID2.Client
         internal static DecryptionDataResponse DecryptDataV3(byte[] encryptedBytes, KeyContainer keys, IdentityScope identityScope)
         {
             var reader = new BigEndianByteReader(new MemoryStream(encryptedBytes));
-            var payloadScope = DecodeIdentityScopeV3(reader.ReadByte());
+            var payloadScope = DecodeEncryptedDataIdentityScopeV3(reader.ReadByte());
             if (payloadScope != identityScope)
             {
                 return DecryptionDataResponse.MakeError(DecryptionStatus.InvalidIdentityScope);
@@ -527,33 +524,20 @@ namespace UID2.Client
             return iv;
         }
 
-        private static IdentityScope DecodeIdentityScopeV3(byte value)
+        private static IdentityScope DecodeEncryptedDataIdentityScopeV3(byte prefix)
         {
-            return (IdentityScope)((value >> 4) & 1);
+            return (IdentityScope)((prefix >> 4) & 1);
         }
 
-        private static bool ValidIdentityScopeAndType(byte value)
+        private static bool TryDecodeIdentityScopeAndTypeV3(byte prefix, out IdentityScope scope, out IdentityType type)
         {
             // 4th bit == 1 then EUID otherwise UID2
-            var identityScope = value >> 4;
+            scope = (IdentityScope) (prefix >> 4);
             // 2nd bit == 1 then Phone else Email
-            var identityType = (value & 0b1111) >> 2;
+            type = (IdentityType) ((prefix >> 2) & 0b11);
 
-
-            return (identityScope == (int)IdentityScope.UID2 || identityScope == (int)IdentityScope.EUID) && 
-                   (identityType == (int)IdentityType.Email || identityType == (int)IdentityType.Phone) &&
-                   // 1st and 0th bits are always 1 or always 0
-                   ((value & 0b11) == 0b11 || (value & 0b11) == 0) ;
-        }
-
-        private static IdentityType DecodeIdentityType(byte value)
-        {
-            // For specifics about the bitwise logic, check:
-            // Confluence - UID2-79 UID2 Token v3/v4 and Raw UID2 format v3
-            // In the base64-encoded version of encryptedId, the first character is always either A/B/E/F.
-            // After converting to binary and performing the AND operation against 0b100,the result is always 0X00.
-            // So just bitshift right twice to get 000X, which results in either 0 or 1.
-            return (IdentityType)((value & 0b100) >> 2);
+            return Enum.IsDefined(typeof(IdentityScope), scope) && Enum.IsDefined(typeof(IdentityType), type) && 
+                ((prefix & 0b11) == 0b11 || (prefix & 0b11) == 0);
         }
     }
 }

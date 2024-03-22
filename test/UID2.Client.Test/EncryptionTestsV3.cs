@@ -162,10 +162,24 @@ namespace UID2.Client.Test
         }
 
         [Fact]
-        public void InvalidPayload()
+        public void TruncatedTokenReturnsInvalidPayload()
         {
             byte[] payload = Convert.FromBase64String(_tokenBuilder.Build());
-            var advertisingToken = Convert.ToBase64String(payload.SkipLast(1).ToArray());
+            var advertisingToken = Convert.ToBase64String(payload.SkipLast(5).ToArray());
+
+            _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+
+            var res = _client.Decrypt(advertisingToken, NOW);
+            Assert.Equal(DecryptionStatus.InvalidPayload, res.Status);
+        }
+        
+        [Fact]
+        public void CorruptPrefixReturnsInvalidPayload()
+        {
+            byte[] payload = Convert.FromBase64String(_tokenBuilder.Build());
+            // Flip a bit
+            payload[0] |= 0b10000000;
+            var advertisingToken = Convert.ToBase64String(payload);
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
 

@@ -310,6 +310,20 @@ namespace UID2.Client.Test
             var res = _client.Decrypt(advertisingToken, NOW);
             Assert.Equal(DecryptionStatus.InvalidPayload, res.Status);
         }
+        
+        [Fact]
+        public void CorruptPrefixReturnsInvalidPayload()
+        {
+            byte[] payload = UID2Base64UrlCoder.Decode(_tokenBuilder.Build());
+            // Flip a bit
+            payload[0] |= 0b10000000;
+            var advertisingToken = UID2Base64UrlCoder.Encode(payload);
+
+            _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
+
+            var res = _client.Decrypt(advertisingToken, NOW);
+            Assert.Equal(DecryptionStatus.InvalidPayload, res.Status);
+        }
 
         [Fact]
         public void TokenExpiryAndCustomNow()

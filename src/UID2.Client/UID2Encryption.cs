@@ -41,16 +41,25 @@ namespace UID2.Client
             {
                 return DecryptV2(Convert.FromBase64String(token), keys, now, domainName, clientType);
             }
-
-            if (data[1] == (int)AdvertisingTokenVersion.V3)
+            else
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
-            }
+                // Assume that newer tokens have an identity scope and type prefix
+                // If we change the format of the identity prefix byte in future token versions, this logic needs to be updated
+                if (!ValidIdentityScopeAndTypeV3(data[0]))
+                {
+                    return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                }
 
-            if (data[1] == (int)AdvertisingTokenVersion.V4)
-            {
-                //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
+                if (data[1] == (int)AdvertisingTokenVersion.V3)
+                {
+                    return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
+                }
+
+                if (data[1] == (int)AdvertisingTokenVersion.V4)
+                {
+                    //same as V3 but use Base64URL encoding
+                    return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
+                }
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
@@ -527,6 +536,11 @@ namespace UID2.Client
         private static IdentityScope DecodeEncryptedDataIdentityScopeV3(byte prefix)
         {
             return (IdentityScope)((prefix >> 4) & 1);
+        }
+
+        private static bool ValidIdentityScopeAndTypeV3(byte prefix)
+        {
+            return TryDecodeIdentityScopeAndTypeV3(prefix, out _, out _);
         }
 
         private static bool TryDecodeIdentityScopeAndTypeV3(byte prefix, out IdentityScope scope, out IdentityType type)

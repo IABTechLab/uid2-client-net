@@ -26,7 +26,7 @@ namespace UID2.Client
 
         internal static string GetAssemblyNameAndVersion()
         {
-            var version = ThisAssembly.AssemblyVersion;
+            var version = ThisAssembly.AssemblyFileVersion;
             return "uid-client-net-" + version;
         }
 

@@ -7,9 +7,9 @@ on:
         type: choice
         description: The type of release
         options:
-        - Major
-        - Minor
         - Patch
+        - Minor
+        - Major
       publish_vulnerabilities:
         type: string
         default: "true"

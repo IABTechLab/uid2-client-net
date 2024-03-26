@@ -551,7 +551,8 @@ namespace UID2.Client
             type = (IdentityType) ((prefix >> 2) & 0b11);
 
             return Enum.IsDefined(typeof(IdentityScope), scope) && Enum.IsDefined(typeof(IdentityType), type) && 
-                ((prefix & 0b11) == 0b11 || (prefix & 0b11) == 0);
+                   // 1st and 0th bit should be 1, but the Python SDK doesn't set those bits, so allow for both
+                   ((prefix & 0b11) == 0b11 || (prefix & 0b11) == 0);
         }
     }
 }

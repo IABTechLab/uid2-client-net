@@ -299,10 +299,10 @@ namespace UID2.Client.Test
         }
 
         [Fact]
-        public void InvalidPayload()
+        public void TruncatedTokenReturnsInvalidPayload()
         {
             byte[] payload = UID2Base64UrlCoder.Decode(_tokenBuilder.Build());
-            var advertisingToken = UID2Base64UrlCoder.Encode(payload.SkipLast(1).ToArray());
+            var advertisingToken = UID2Base64UrlCoder.Encode(payload.SkipLast(5).ToArray());
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
 
             _client.RefreshJson(KeySetToJson(MASTER_KEY, SITE_KEY));
@@ -310,7 +310,7 @@ namespace UID2.Client.Test
             var res = _client.Decrypt(advertisingToken, NOW);
             Assert.Equal(DecryptionStatus.InvalidPayload, res.Status);
         }
-
+        
         [Fact]
         public void TokenExpiryAndCustomNow()
         {

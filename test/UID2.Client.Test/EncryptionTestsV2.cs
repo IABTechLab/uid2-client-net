@@ -142,7 +142,7 @@ namespace UID2.Client.Test
         }
 
         [Fact]
-        public void InvalidPayload()
+        public void TruncatedTokenReturnsInvalidPayload()
         {
             byte[] payload = Convert.FromBase64String(_tokenBuilder.Build());
             var advertisingToken = Convert.ToBase64String(payload.SkipLast(1).ToArray());

@@ -5,7 +5,7 @@ namespace UID2.Client
     public readonly struct DecryptionResponse
     {
         public DecryptionResponse(DecryptionStatus status, string uid, DateTime? established, int? siteId, int? siteKeySiteId, IdentityType? identityType, int? advertisingTokenVersion,
-            bool? isClientSideGenerated = false)
+            bool? isClientSideGenerated = false, DateTime? expiry = null)
         {
             Status = status;
             Uid = uid;
@@ -15,6 +15,7 @@ namespace UID2.Client
             IdentityType = identityType;
             AdvertisingTokenVersion = advertisingTokenVersion;
             IsClientSideGenerated = isClientSideGenerated;
+            Expiry = expiry;
         }
 
         public static DecryptionResponse MakeError(DecryptionStatus status)
@@ -31,5 +32,6 @@ namespace UID2.Client
         public IdentityType? IdentityType { get; }
         public int? AdvertisingTokenVersion { get; }
         public bool? IsClientSideGenerated { get; }
+        public DateTime? Expiry { get; }
     }
 }

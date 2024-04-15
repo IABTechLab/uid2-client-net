@@ -15,12 +15,14 @@ namespace UID2.Client.Utils
         {
             public DateTime TokenExpiry = DateTime.UtcNow.AddHours(1);
             public int PrivacyBits = 0;
-            public DateTime TokenGenerated =  DateTime.UtcNow;
+            public DateTime TokenGenerated = DateTime.UtcNow;
+            public DateTime IdentityEstablished = DateTime.UtcNow;
 
             public Params() { }
             public Params WithTokenExpiry(DateTime expiry) { TokenExpiry = expiry; return this; }
             public Params WithPrivacyBits(int privacyBits) { PrivacyBits = privacyBits; return this; }
-            public Params WithTokenGenerated(DateTime generated) { TokenGenerated = generated; return this; }
+            public Params WithTokenGenerated(DateTime generated) { TokenGenerated = generated; return this; } //when was the most recent refresh done (or if not refreshed, when was the /token/generate or CSTG call)
+            public Params WithIdentityEstablished(DateTime established) { IdentityEstablished = established; return this; } //when was the first call to /token/generate or CSTG
 
             public int IdentityScope = (int)UID2.Client.IdentityScope.UID2;
         }
@@ -50,7 +52,7 @@ namespace UID2.Client.Utils
             identityWriter.Write(uidBytes.Length);
             identityWriter.Write(uidBytes);
             identityWriter.Write(encryptParams.PrivacyBits);
-            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated));
+            identityWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.IdentityEstablished));
             byte[] identityIv = new byte[16];
             ThreadSafeRandom.PerThread.NextBytes(identityIv);
             byte[] encryptedIdentity = Encrypt(identityStream.ToArray(), identityIv, siteKey.Secret);
@@ -122,14 +124,14 @@ namespace UID2.Client.Utils
 
             // user identity data
             sitePayloadWriter.Write(encryptParams.PrivacyBits);
-            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); // established
+            sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.IdentityEstablished)); // established
             sitePayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); // last refreshed
             sitePayloadWriter.Write(Convert.FromBase64String(uid));
 
             var masterPayload = new MemoryStream();
             var masterPayloadWriter = new BigEndianByteWriter(masterPayload);
             masterPayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenExpiry));
-            masterPayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); // token created
+            masterPayloadWriter.Write(DateTimeUtils.DateTimeToEpochMilliseconds(encryptParams.TokenGenerated)); //identity refreshed, seems to be identical to TokenGenerated in Operator
 
             // operator identity data
             masterPayloadWriter.Write(0); // site id

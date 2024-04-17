@@ -56,6 +56,12 @@ namespace UID2.Client.Test
             BidstreamClientTests.AssertSuccess(res, tokenVersion);
         }
 
+        private void Refresh(string json)
+        {
+            var refreshResult = _client.RefreshJson(json);
+			Assert.True(refreshResult.Success);            
+        }
+
         [Theory]
         [InlineData(IdentityScope.UID2, TokenVersion.V2)]
         [InlineData(IdentityScope.EUID, TokenVersion.V2)]
@@ -63,12 +69,14 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
-        private void SmokeTest(IdentityScope identityScope, TokenVersion tokenVersion)
+        private void SmokeTestForSharing(IdentityScope identityScope, TokenVersion tokenVersion)
         {
-            var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+            
 
-            var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).Build();
+            var now = DateTime.UtcNow;
+            var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithEstablished(now.AddMonths(-4)).WithGenerated(now.AddDays(-1)).WithExpiry(now.AddDays(29)).
+                Build();
 
             DecryptAndAssertSuccess(advertisingToken, tokenVersion);
         }
@@ -80,15 +88,19 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
-        private void TokenLifetimeTooLongForSharing(IdentityScope identityScope, TokenVersion tokenVersion)
+        private void TokenLifetimeTooLongForSharingButRemainingLifetimeAllowed(IdentityScope identityScope, TokenVersion tokenVersion)
         {
-            var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+            
 
-            var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithExpiry(DateTime.UtcNow.AddDays(31)).Build();
+            var generated = DateTime.UtcNow.AddDays(-1);
+            var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithGenerated(generated).WithExpiry(generated.AddDays(31)).Build();
 
             var res = _client.DecryptTokenIntoRawUid(advertisingToken);
-            BidstreamClientTests.AssertFails(res, tokenVersion);
+            if (tokenVersion == TokenVersion.V2)
+                BidstreamClientTests.AssertSuccess(res, tokenVersion);
+            else
+                BidstreamClientTests.AssertFails(res, tokenVersion);
         }
 
         [Theory]
@@ -98,10 +110,30 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V3)]
         [InlineData(IdentityScope.UID2, TokenVersion.V4)]
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
+        private void TokenRemainingLifetimeTooLongForSharing(IdentityScope identityScope, TokenVersion tokenVersion)
+        {
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+            
+
+            var now = DateTime.UtcNow;
+            var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithGenerated(now).
+                WithExpiry(now.AddDays(30).AddMinutes(1)).Build();
+
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken);
+            BidstreamClientTests.AssertFails(res, tokenVersion);
+        }
+
+
+        [Theory]
+        //Note V2 does not have a "token generated" field, therefore v2 tokens can't have a future "token generated" date and are excluded from this test.
+        [InlineData(IdentityScope.UID2, TokenVersion.V3)]
+        [InlineData(IdentityScope.EUID, TokenVersion.V3)]
+        [InlineData(IdentityScope.UID2, TokenVersion.V4)]
+        [InlineData(IdentityScope.EUID, TokenVersion.V4)]
         private void TokenGeneratedInTheFutureToSimulateClockSkew(IdentityScope identityScope, TokenVersion tokenVersion)
         {
-            var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+            
 
             var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithGenerated(DateTime.UtcNow.AddMinutes(31)).Build();
 
@@ -118,8 +150,8 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
         private void TokenGeneratedInTheFutureWithinAllowedClockSkew(IdentityScope identityScope, TokenVersion tokenVersion)
         {
-            var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+            
 
             var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithGenerated(DateTime.UtcNow.AddMinutes(30)).Build();
 
@@ -133,8 +165,8 @@ namespace UID2.Client.Test
         [InlineData(IdentityScope.EUID, TokenVersion.V4)]
         private void PhoneTest(IdentityScope identityScope, TokenVersion tokenVersion)
         {
-            var refreshResult = _client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+            
 
             const string rawUidPhone = "BEOGxroPLdcY7LrSiwjY52+X05V0ryELpJmoWAyXiwbZ";
             var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithRawUid(rawUidPhone).Build();
@@ -152,8 +184,8 @@ namespace UID2.Client.Test
         [InlineData(TokenVersion.V4)]
         private void LegacyResponseFromOldOperator(TokenVersion tokenVersion)
         {
-            var refreshResult = _client.RefreshJson(TestData.KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
-            Assert.True(refreshResult.Success);
+            Refresh(TestData.KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
+            
 
             var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).Build();
 
@@ -173,7 +205,7 @@ namespace UID2.Client.Test
             UID2Client client = new("endpoint", "authkey", CLIENT_SECRET, identityScope);
 
             var refreshResult = client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            
 
             var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithGenerated(DateTime.UtcNow.AddDays(99)).Build();
 
@@ -193,7 +225,7 @@ namespace UID2.Client.Test
             UID2Client client = new("endpoint", "authkey", CLIENT_SECRET, identityScope);
 
             var refreshResult = client.RefreshJson(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
-            Assert.True(refreshResult.Success);
+            
 
             var advertisingToken = AdvertisingTokenBuilder.Builder().WithVersion(tokenVersion).WithScope(identityScope).WithExpiry(DateTime.UtcNow.AddDays(99)).Build();
 
@@ -206,8 +238,8 @@ namespace UID2.Client.Test
         private SharingClient SharingSetupAndEncrypt(out string advertisingToken)
         {
             var json = KeySetToJsonForSharing(new [] {MASTER_KEY, SITE_KEY});
-            var refreshResult = _client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            Refresh(json);
+            
 
             advertisingToken = SharingEncrypt(_client);
 
@@ -230,7 +262,7 @@ namespace UID2.Client.Test
             var client = new SharingClient("endpoint", "authkey", CLIENT_SECRET);
             var json = KeySetToJsonForSharing(new[] { MASTER_KEY, SITE_KEY }, identityScope);
             var refreshResult = client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            
 
             string advertisingToken = SharingEncrypt(client, identityScope); //this validates token and asserts
         }
@@ -255,7 +287,7 @@ namespace UID2.Client.Test
             var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, IdentityScope.UID2, callerSiteId: 4874, defaultKeysetId: 12345);
 
             var refreshResult = receivingClient.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            
 
             var res = receivingClient.DecryptTokenIntoRawUid(advertisingToken);
             Assert.True(res.Success);
@@ -285,8 +317,8 @@ namespace UID2.Client.Test
         public void RawUidProducesCorrectIdentityTypeInToken()
         {
             var json = KeySetToJsonForSharing(new [] {MASTER_KEY, SITE_KEY});
-            var refreshResult = _client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            Refresh(json);
+            
 
             //see UID2-79+Token+and+ID+format+v3 . Also note EUID does not support v2 or phone
             Assert.Equal(IdentityType.Email, GetTokenIdentityType("Q4bGug8t1xjsutKLCNjnb5fTlXSvIQukmahYDJeLBtk=")); //v2 +12345678901. Although this was generated from a phone number, it's a v2 raw UID which doesn't encode this information, so token assumes email by default.
@@ -319,8 +351,8 @@ namespace UID2.Client.Test
             Key SITE_KEY2 = new Key(id: 265, siteId: SITE_ID, created: NOW.AddDays(-10), activates: YESTERDAY, expires: NOW.AddHours(-1), secret: SITE_SECRET);
 
             var json = KeySetToJsonForSharing(new [] {MASTER_KEY, MASTER_KEY2, SITE_KEY, SITE_KEY2});
-            var refreshResult = _client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            Refresh(json);
+            
 
             string advertisingToken = SharingEncrypt(_client);
 
@@ -333,8 +365,8 @@ namespace UID2.Client.Test
         public void CannotEncryptIfNoKeyFromTheDefaultKeyset()
         {
             var json = KeySetToJsonForSharing(new[] {MASTER_KEY});
-            var refreshResult = _client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            Refresh(json);
+            
 
             var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
@@ -345,8 +377,8 @@ namespace UID2.Client.Test
         public void CannotEncryptIfTheresNoDefaultKeysetHeader()
         {
             var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, IdentityScope.UID2,SITE_ID);
-            var refreshResult = _client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            Refresh(json);
+            
 
             var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2);
             Assert.Equal(EncryptionStatus.NotAuthorizedForKey, encrypted.Status);
@@ -356,8 +388,8 @@ namespace UID2.Client.Test
         public void ExpiryInTokenMatchesExpiryInResponse()
         {
             var json = KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }, IdentityScope.UID2,SITE_ID, defaultKeysetId: 99999, tokenExpirySeconds: 2);
-            var refreshResult = _client.RefreshJson(json);
-            Assert.True(refreshResult.Success);
+            Refresh(json);
+            
 
             var encryptedAt = DateTime.UtcNow;
             var encrypted = _client.EncryptRawUidIntoToken(EXAMPLE_EMAIL_RAW_UID2_V2, encryptedAt);

@@ -123,7 +123,7 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
-            if (!DoesTokenHaveValidLifetime(clientType, keys, established, expiry, now))
+            if (!DoesTokenHaveValidLifetime(clientType, keys, now, expiry, now))
                 return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
 
             return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
@@ -160,7 +160,8 @@ namespace UID2.Client
             var masterPayloadReader = new BigEndianByteReader(new MemoryStream(masterDecrypted));
 
             long expiresMilliseconds = masterPayloadReader.ReadInt64();
-            long createdMilliseconds = masterPayloadReader.ReadInt64();
+            long generatedMilliseconds = masterPayloadReader.ReadInt64();
+            var generated = DateTimeUtils.FromEpochMilliseconds(generatedMilliseconds);
 
             int operatorSiteId = masterPayloadReader.ReadInt32();
             byte operatorType = masterPayloadReader.ReadByte();
@@ -207,13 +208,13 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
-            if (!DoesTokenHaveValidLifetime(clientType, keys, established, expiry, now))
+            if (!DoesTokenHaveValidLifetime(clientType, keys, generated, expiry, now))
                 return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
 
             return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
         }
 
-        private static bool DoesTokenHaveValidLifetime(ClientType clientType, KeyContainer keys, DateTime established, DateTime expiry, DateTime now)
+        private static bool DoesTokenHaveValidLifetime(ClientType clientType, KeyContainer keys, DateTime generatedOrNow, DateTime expiry, DateTime now)
         {
             long maxLifetimeSeconds;
             switch (clientType)
@@ -228,16 +229,17 @@ namespace UID2.Client
                     return true;
             }
 
-            return DoesTokenHaveValidLifetimeImpl(established, expiry, now, maxLifetimeSeconds, keys.AllowClockSkewSeconds);
+            //generatedOrNow allows "now" for token v2, since v2 does not contain a "token generated" field. v2 therefore checks against remaining lifetime rather than total lifetime.
+            return DoesTokenHaveValidLifetimeImpl(generatedOrNow, expiry, now, maxLifetimeSeconds, keys.AllowClockSkewSeconds);
         }
 
 
-        private static bool DoesTokenHaveValidLifetimeImpl(DateTime established, DateTime expiry, DateTime now, long maxLifetimeSeconds, long allowClockSkewSeconds)
+        private static bool DoesTokenHaveValidLifetimeImpl(DateTime generatedOrNow, DateTime expiry, DateTime now, long maxLifetimeSeconds, long allowClockSkewSeconds)
         {
-            if ((expiry - established).TotalSeconds > maxLifetimeSeconds)
+            if ((expiry - generatedOrNow).TotalSeconds > maxLifetimeSeconds)
                 return false;
 
-            return (established - now).TotalSeconds <= allowClockSkewSeconds; //returns false if token generated too far in the future
+            return (generatedOrNow - now).TotalSeconds <= allowClockSkewSeconds; //returns false if token generated too far in the future
         }
 
         private static bool IsDomainNameAllowedForSite(ClientType clientType, PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)

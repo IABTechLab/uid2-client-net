@@ -17,6 +17,7 @@ namespace UID2.Client.Test.builder
         public DateTime Expiry { get; private set; } = DateTime.UtcNow.AddHours(1);
         public IdentityScope Scope { get; private set; } = IdentityScope.UID2;
         public DateTime Generated { get; private set; } = DateTime.UtcNow;
+        public DateTime Established { get; private set; } = DateTime.UtcNow;
 
         internal static AdvertisingTokenBuilder Builder()
         {
@@ -70,11 +71,16 @@ namespace UID2.Client.Test.builder
             Generated = generated;
             return this;
         }
+        internal AdvertisingTokenBuilder WithEstablished(DateTime established)
+        {
+            Established = established;
+            return this;
+        }
 
 
         internal string Build()
         {
-            var encryptParams = new UID2TokenGenerator.Params().WithPrivacyBits(PrivacyBits).WithTokenExpiry(Expiry).WithTokenGenerated(Generated);
+            var encryptParams = new UID2TokenGenerator.Params().WithPrivacyBits(PrivacyBits).WithTokenExpiry(Expiry).WithTokenGenerated(Generated).WithIdentityEstablished(Established);
             encryptParams.IdentityScope = (int) Scope;
 
             var token = Version switch

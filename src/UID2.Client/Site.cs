@@ -10,7 +10,7 @@ namespace UID2.Client
         public Site(int id, IEnumerable<string> domainNames)
         {
             Id = id;
-            _domainNames = new HashSet<string>(domainNames, StringComparer.OrdinalIgnoreCase);
+            _domainNames = new HashSet<string>(domainNames);
         }
 
         public int Id { get; }

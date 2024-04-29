@@ -13,8 +13,8 @@ namespace UID2.Client
     {
         Sharing,
         Bidstream,
-        LegacyWithoutDomainCheck,
-        LegacyWithDomainCheck
+        LegacyWithoutDomainOrAppNameCheck,
+        LegacyWithDomainOrAppNameCheck
     }
 
     internal static class UID2Encryption
@@ -26,7 +26,7 @@ namespace UID2.Client
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 
-        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainName, IdentityScope identityScope, ClientType clientType)
+        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainOrAppName, IdentityScope identityScope, ClientType clientType)
         {
             if (token.Length < 4)
             {
@@ -39,24 +39,24 @@ namespace UID2.Client
 
             if (data[0] == 2)
             {
-                return DecryptV2(Convert.FromBase64String(token), keys, now, domainName, clientType);
+                return DecryptV2(Convert.FromBase64String(token), keys, now, domainOrAppName, clientType);
             }
             
             if (data[1] == (int)AdvertisingTokenVersion.V3)
             {
-                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainName, clientType);
+                return DecryptV3(Convert.FromBase64String(token), keys, now, identityScope, 3, domainOrAppName, clientType);
             }
 
             if (data[1] == (int)AdvertisingTokenVersion.V4)
             {
                 //same as V3 but use Base64URL encoding
-                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainName, clientType);
+                return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainOrAppName, clientType);
             }
 
             return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
         }
 
-        private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainName, ClientType clientType)
+        private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainOrAppName, ClientType clientType)
         {
             if (encryptedId.Length != TOKEN_V2_LENGTH)
             {
@@ -118,9 +118,9 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
-            if (!IsDomainNameAllowedForSite(clientType, privacyBits, siteId, domainName, keys))
+            if (!IsDomainOrAppNameAllowedForSite(clientType, privacyBits, siteId, domainOrAppName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                return new DecryptionResponse(DecryptionStatus.DomainOrAppNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (!DoesTokenHaveValidLifetime(clientType, keys, now, expiry, now))
@@ -129,7 +129,7 @@ namespace UID2.Client
             return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainName, ClientType clientType)
+        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainOrAppName, ClientType clientType)
         {
             if (encryptedId.Length < TOKEN_V3_MIN_LENGTH)
             {
@@ -203,9 +203,9 @@ namespace UID2.Client
                 return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
-            if (!IsDomainNameAllowedForSite(clientType, privacyBits, siteId, domainName, keys))
+            if (!IsDomainOrAppNameAllowedForSite(clientType, privacyBits, siteId, domainOrAppName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                return new DecryptionResponse(DecryptionStatus.DomainOrAppNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
             }
 
             if (!DoesTokenHaveValidLifetime(clientType, keys, generated, expiry, now))
@@ -242,15 +242,15 @@ namespace UID2.Client
             return (generatedOrNow - now).TotalSeconds <= allowClockSkewSeconds; //returns false if token generated too far in the future
         }
 
-        private static bool IsDomainNameAllowedForSite(ClientType clientType, PrivacyBits privacyBits, int siteId, string domainName, KeyContainer keys)
+        private static bool IsDomainOrAppNameAllowedForSite(ClientType clientType, PrivacyBits privacyBits, int siteId, string domainOrAppName, KeyContainer keys)
         {
             if (!privacyBits.IsClientSideGenerated)
                 return true;
 
-            if (clientType != ClientType.Bidstream && clientType != ClientType.LegacyWithDomainCheck)
+            if (clientType != ClientType.Bidstream && clientType != ClientType.LegacyWithDomainOrAppNameCheck)
                 return true;
 
-            return keys.IsDomainNameAllowedForSite(siteId, domainName);
+            return keys.IsDomainOrAppNameAllowedForSite(siteId, domainOrAppName);
         }
 
         internal static EncryptionDataResponse Encrypt(string rawUid, KeyContainer keys, IdentityScope identityScope, DateTime now)
@@ -327,8 +327,8 @@ namespace UID2.Client
                 {
                     try
                     {
-                        // if the enableDomainNameCheck param is enabled , the caller would have to provide siteId as part of the EncryptionDataRequest.
-                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, domainName: null, identityScope, ClientType.LegacyWithoutDomainCheck);
+                        // if the enableDomainOrAppNameCheck param is enabled , the caller would have to provide siteId as part of the EncryptionDataRequest.
+                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, domainOrAppName: null, identityScope, ClientType.LegacyWithoutDomainOrAppNameCheck);
                         if (!decryptedToken.Success)
                         {
                             return EncryptionDataResponse.MakeError(EncryptionStatus.TokenDecryptFailure);

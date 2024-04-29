@@ -59,27 +59,45 @@ namespace UID2.Client.Test
         }
 
         [Theory]
-        // These are the domains associated with site SITE_ID, as defined by KeySharingResponse();
+        // These are the domain or app names associated with site SITE_ID, as defined by KeySharingResponse();
         [InlineData("example.com")]
         [InlineData("example.org")]
-        public void TokenIsCstgDerivedTest(string domainName)
+        [InlineData("com.123.Game.App.android")]
+        public void TokenIsCstgDerivedTest(string domainOrAppName)
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, domainName);
+            var res = _client.Decrypt(advertisingToken, domainOrAppName);
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
             Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
+        
+        [Theory]
+        // These are the domain or app names associated with site SITE_ID but vary in capitalization, as defined by KeySharingResponse();
+        [InlineData("example.Com")]
+        [InlineData("Example.org")]
+        [InlineData("com.123.game.App.android")]
+        public void DomainOrAppNameCaseSensitiveAndCheckFailedTest(string domainOrAppName)
+        {
+            _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
+            var res = _client.Decrypt(advertisingToken, domainOrAppName);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.False(res.Success);
+            Assert.Equal(DecryptionStatus.DomainOrAppNameCheckFailed, res.Status);
+        }
 
         [Theory]
         [InlineData((string)null)]
         [InlineData("")]
-        // Domains associated with site SITE_ID2, as defined by KeySharingResponse().
+        // Domain or app names associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.net")]
         [InlineData("example.edu")]
+        [InlineData("com.123.Game.App.ios")]
         // Domain not associated with any site.
         [InlineData("foo.com")]
         public void TokenIsCstgDerivedDomainNameFailTest(string domainName)
@@ -90,7 +108,7 @@ namespace UID2.Client.Test
             var res = _client.Decrypt(advertisingToken, domainName);
             Assert.True(res.IsClientSideGenerated);
             Assert.False(res.Success);
-            Assert.Equal(DecryptionStatus.DomainNameCheckFailed, res.Status);
+            Assert.Equal(DecryptionStatus.DomainOrAppNameCheckFailed, res.Status);
             Assert.Null(res.Uid);
         }
         

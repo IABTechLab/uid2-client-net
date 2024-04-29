@@ -15,7 +15,7 @@ namespace UID2.Client
             _uid2ClientHelper = new Uid2ClientHelper(endpoint, authKey, secretKey);
         }
 
-        internal DecryptionResponse Decrypt(string token, DateTime now, string domainNameFromBidRequest, ClientType clientType)
+        internal DecryptionResponse Decrypt(string token, DateTime now, string domainOrAppNameFromBidRequest, ClientType clientType)
         {
             var container = Volatile.Read(ref _container);
             if (container == null)
@@ -30,7 +30,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, container.IdentityScope, clientType);
+                return UID2Encryption.Decrypt(token, container, now, domainOrAppNameFromBidRequest, container.IdentityScope, clientType);
             }
             catch (Exception)
             {

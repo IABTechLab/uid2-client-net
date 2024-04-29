@@ -114,14 +114,14 @@ namespace UID2.Client
             return TryGetKeysetActiveKey(_masterKeysetId, now, out key);
         }
 
-        public bool IsDomainNameAllowedForSite(int siteId, string domainName)
+        public bool IsDomainOrAppNameAllowedForSite(int siteId, string domainOrAppName)
         {
-            if (domainName == null)
+            if (domainOrAppName == null)
             {
                 return false;
             }
             
-            return this._siteIdToSite.TryGetValue(siteId, out var site) && site.AllowDomainName(domainName);
+            return this._siteIdToSite.TryGetValue(siteId, out var site) && site.AllowDomainName(domainOrAppName);
         }
 
         private bool TryGetKeysetActiveKey(int keysetId, DateTime now, out Key key)

@@ -79,12 +79,12 @@ namespace UID2.Client.Test
                         new
                         {
                             id = SITE_ID,
-                            domain_names = new[] { "example.com", "example.org" }
+                            domain_names = new[] { "example.com", "example.org", "com.123.Game.App.android" }
                         },
                         new
                         {
                             id = SITE_ID2,
-                            domain_names = new[] { "example.net", "example.edu" }
+                            domain_names = new[] { "example.net", "example.edu", "com.123.Game.App.ios" }
                         }
                     }
                 }

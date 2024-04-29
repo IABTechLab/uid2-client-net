@@ -370,12 +370,12 @@ namespace UID2.Client.Test
         [InlineData("example.edu", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("com.123.Game.App.ios", TokenVersion.V4)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V4)]     // Domain not associated with any site.
-        private void TokenIsCstgDerivedDomainNameFailTest(string domainName, TokenVersion tokenVersion)
+        private void TokenIsCstgDerivedDomainOrAppNameFailTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
-            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainOrAppName);
             Assert.True(res.IsClientSideGenerated);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.DomainOrAppNameCheckFailed, res.Status);
@@ -383,26 +383,29 @@ namespace UID2.Client.Test
         }
 
         [Theory]
-        // Any domain name is OK, because the token is not client-side generated.
+        // Any domain or app name is OK, because the token is not client-side generated.
         [InlineData((string)null, TokenVersion.V2)]
         [InlineData("", TokenVersion.V2)]
         [InlineData("example.com", TokenVersion.V2)]
         [InlineData("foo.com", TokenVersion.V2)]
+        [InlineData("com.uid2.devapp", TokenVersion.V2)]
         [InlineData((string)null, TokenVersion.V3)]
         [InlineData("", TokenVersion.V3)]
         [InlineData("example.com", TokenVersion.V3)]
         [InlineData("foo.com", TokenVersion.V3)]
+        [InlineData("com.uid2.devapp", TokenVersion.V3)]
         [InlineData((string)null, TokenVersion.V4)]
         [InlineData("", TokenVersion.V4)]
         [InlineData("example.com", TokenVersion.V4)]
         [InlineData("foo.com", TokenVersion.V4)]
-        private void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName, TokenVersion tokenVersion)
+        [InlineData("com.uid2.devapp", TokenVersion.V4)]
+        private void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
-            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainOrAppName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);

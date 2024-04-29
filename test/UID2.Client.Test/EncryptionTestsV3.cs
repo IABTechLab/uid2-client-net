@@ -112,13 +112,13 @@ namespace UID2.Client.Test
             Assert.Null(res.Uid);
         }
         
-        // if there is domain name associated with sites but we explicitly call 
+        // if there is domain or app name associated with sites but we explicitly call 
         // DecryptionResponse Decrypt(string token) or DecryptionResponse Decrypt(string token, DateTime utcNow)
         // and we do not want to do domain name check
         // the Decrypt function would still decrypt successfully
         // in case DSP does not want to enable domain name check
         [Fact]
-        public void TokenIsCstgDerivedNoDomainNameTest()
+        public void TokenIsCstgDerivedNoDomainOrAppNameTest()
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
@@ -131,17 +131,18 @@ namespace UID2.Client.Test
         }
 
         [Theory]
-        // Any domain name is OK, because the token is not client-side generated.
+        // Any domain or app name is OK, because the token is not client-side generated.
         [InlineData((string) null)]
         [InlineData("")]
         [InlineData("example.com")]
         [InlineData("foo.com")]
-        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName)
+        [InlineData("com.uid2.devapp")]
+        public void TokenIsNotCstgDerivedDomainOrAppNameSuccessTest(string domainOrAppName)
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, domainName);
+            var res = _client.Decrypt(advertisingToken, domainOrAppName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);

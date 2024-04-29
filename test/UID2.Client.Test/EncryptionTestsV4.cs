@@ -244,13 +244,13 @@ namespace UID2.Client.Test
             Assert.Null(res.Uid);
         }
         
-        // if there is domain name associated with sites but we explicitly call 
+        // if there is domain or app name associated with sites but we explicitly call 
         // DecryptionResponse Decrypt(string token) or DecryptionResponse Decrypt(string token, DateTime utcNow)
         // and we do not want to do domain name check
         // the Decrypt function would still decrypt successfully
         // in case DSP does not want to enable domain name check
         [Fact]
-        public void TokenIsCstgDerivedNoDomainNameTest()
+        public void TokenIsCstgDerivedNoDomainOrAppNameTest()
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
@@ -268,13 +268,14 @@ namespace UID2.Client.Test
         [InlineData("")]
         [InlineData("example.com")]
         [InlineData("foo.com")]
-        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName)
+        [InlineData("com.uid2.devapp")]
+        public void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainOrAppName)
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
-            var res = _client.Decrypt(advertisingToken, domainName);
+            var res = _client.Decrypt(advertisingToken, domainOrAppName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);

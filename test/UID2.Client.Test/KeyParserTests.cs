@@ -156,9 +156,9 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(json);
 
-            var isDomainNameForSite = keyContainer.IsDomainOrAppNameAllowedForSite(1, "example.com");
+            var isDomainOrAppNameForSite = keyContainer.IsDomainOrAppNameAllowedForSite(1, "example.com");
 
-            Assert.False(isDomainNameForSite);
+            Assert.False(isDomainOrAppNameForSite);
 
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }
@@ -184,8 +184,8 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(json);
 
-            var isDomainNameForSite = keyContainer.IsDomainOrAppNameAllowedForSite(1, "example.com");
-            Assert.False(isDomainNameForSite);
+            var isDomainOrAppNameForSite = keyContainer.IsDomainOrAppNameAllowedForSite(1, "example.com");
+            Assert.False(isDomainOrAppNameForSite);
             Assert.False(keyContainer.IsDomainOrAppNameAllowedForSite(1, null));
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }

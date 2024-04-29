@@ -232,12 +232,12 @@ namespace UID2.Client.Test
         [InlineData("com.123.Game.App.ios")]
         // Domain not associated with any site.
         [InlineData("foo.com")]
-        public void TokenIsCstgDerivedDomainNameFailTest(string domainName)
+        public void TokenIsCstgDerivedDomainOrAppNameFailTest(string domainOrAppName)
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).Build();
-            var res = _client.Decrypt(advertisingToken, domainName);
+            var res = _client.Decrypt(advertisingToken, domainOrAppName);
             Assert.True(res.IsClientSideGenerated);
             Assert.False(res.Success);
             Assert.Equal(DecryptionStatus.DomainOrAppNameCheckFailed, res.Status);

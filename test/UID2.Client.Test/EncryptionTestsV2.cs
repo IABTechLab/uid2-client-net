@@ -43,6 +43,7 @@ namespace UID2.Client.Test
         [InlineData("example.com")]
         [InlineData("example.org")]
         [InlineData("com.123.Game.App.android")]
+        [InlineData("123456789")]
         public void TokenIsCstgDerivedTest(string domainOrAppName)
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
@@ -78,6 +79,7 @@ namespace UID2.Client.Test
         [InlineData("example.net")]
         [InlineData("example.edu")]
         [InlineData("com.123.Game.App.ios")]
+        [InlineData("123456780")]
         // Domain not associated with any site.
         [InlineData("foo.com")]
         public void TokenIsCstgDerivedDomainOrAppNameFailTest(string domainOrAppName)

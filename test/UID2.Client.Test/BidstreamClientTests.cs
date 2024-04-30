@@ -306,12 +306,15 @@ namespace UID2.Client.Test
         [InlineData("example.com", TokenVersion.V2)]
         [InlineData("example.org", TokenVersion.V2)]
         [InlineData("com.123.Game.App.android", TokenVersion.V2)]
+        [InlineData("123456789", TokenVersion.V2)]
         [InlineData("example.com", TokenVersion.V3)]
         [InlineData("example.org", TokenVersion.V3)]
         [InlineData("com.123.Game.App.android", TokenVersion.V3)]
+        [InlineData("123456789", TokenVersion.V3)]
         [InlineData("example.com", TokenVersion.V4)]
         [InlineData("example.org", TokenVersion.V4)]
         [InlineData("com.123.Game.App.android", TokenVersion.V4)]
+        [InlineData("123456789", TokenVersion.V4)]
         private void TokenIsCstgDerivedTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
@@ -357,18 +360,21 @@ namespace UID2.Client.Test
         [InlineData("example.net", TokenVersion.V2)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.edu", TokenVersion.V2)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("com.123.Game.App.ios", TokenVersion.V2)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("123456780", TokenVersion.V2)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V2)]     // Domain not associated with any site.
         [InlineData((string)null, TokenVersion.V3)]
         [InlineData("", TokenVersion.V3)]
         [InlineData("example.net", TokenVersion.V3)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.edu", TokenVersion.V3)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("com.123.Game.App.ios", TokenVersion.V3)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("123456780", TokenVersion.V3)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V3)]     // Domain not associated with any site.
         [InlineData((string)null, TokenVersion.V4)]
         [InlineData("", TokenVersion.V4)]
         [InlineData("example.net", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.edu", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("com.123.Game.App.ios", TokenVersion.V4)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("123456780", TokenVersion.V4)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V4)]     // Domain not associated with any site.
         private void TokenIsCstgDerivedDomainOrAppNameFailTest(string domainOrAppName, TokenVersion tokenVersion)
         {

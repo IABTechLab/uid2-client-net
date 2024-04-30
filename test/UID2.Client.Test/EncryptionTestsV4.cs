@@ -212,7 +212,7 @@ namespace UID2.Client.Test
         [InlineData("example.Com")]
         [InlineData("Example.org")]
         [InlineData("com.123.game.App.android")]
-        public void DomainOrAppNameCaseSensitiveAndCheckFailedTest(string domainOrAppName)
+        public void DomainOrAppNameCaseInSensitiveTest(string domainOrAppName)
         {
             _client.RefreshJson(KeySharingResponse(new [] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
@@ -220,8 +220,9 @@ namespace UID2.Client.Test
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email);
             var res = _client.Decrypt(advertisingToken, domainOrAppName);
             Assert.True(res.IsClientSideGenerated);
-            Assert.False(res.Success);
-            Assert.Equal(DecryptionStatus.DomainOrAppNameCheckFailed, res.Status);
+            Assert.True(res.Success);
+            Assert.Equal(DecryptionStatus.Success, res.Status);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
         }
 
         [Theory]

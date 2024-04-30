@@ -340,7 +340,7 @@ namespace UID2.Client.Test
         [InlineData("example.com", TokenVersion.V4)]
         [InlineData("example.org", TokenVersion.V4)]
         [InlineData("com.123.Game.App.android", TokenVersion.V4)]
-        private void DomainOrAppNameCaseSensitiveAndCheckFailedTest(string domainOrAppName, TokenVersion tokenVersion)
+        private void DomainOrAppNameCaseInSensitiveTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
 

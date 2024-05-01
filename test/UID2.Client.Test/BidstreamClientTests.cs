@@ -331,15 +331,15 @@ namespace UID2.Client.Test
         
         [Theory]
         // These are the domain or app names associated with site SITE_ID but vary in capitalization, as defined by KeySharingResponse();
-        [InlineData("example.com", TokenVersion.V2)]
-        [InlineData("example.org", TokenVersion.V2)]
-        [InlineData("com.123.Game.App.android", TokenVersion.V2)]
-        [InlineData("example.com", TokenVersion.V3)]
-        [InlineData("example.org", TokenVersion.V3)]
-        [InlineData("com.123.Game.App.android", TokenVersion.V3)]
-        [InlineData("example.com", TokenVersion.V4)]
-        [InlineData("example.org", TokenVersion.V4)]
-        [InlineData("com.123.Game.App.android", TokenVersion.V4)]
+        [InlineData("Example.com", TokenVersion.V2)]
+        [InlineData("Example.Org", TokenVersion.V2)]
+        [InlineData("com.123.Game.app.android", TokenVersion.V2)]
+        [InlineData("Example.com", TokenVersion.V3)]
+        [InlineData("Example.Org", TokenVersion.V3)]
+        [InlineData("com.123.Game.app.android", TokenVersion.V3)]
+        [InlineData("Example.com", TokenVersion.V4)]
+        [InlineData("Example.Org", TokenVersion.V4)]
+        [InlineData("com.123.Game.app.android", TokenVersion.V4)]
         private void DomainOrAppNameCaseInSensitiveTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));

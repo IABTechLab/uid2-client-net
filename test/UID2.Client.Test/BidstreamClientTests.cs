@@ -302,21 +302,52 @@ namespace UID2.Client.Test
         }
 
         [Theory]
-        // These are the domains associated with site SITE_ID, as defined by KeySharingResponse();
+        // These are the domain or app names associated with site SITE_ID, as defined by KeySharingResponse();
         [InlineData("example.com", TokenVersion.V2)]
         [InlineData("example.org", TokenVersion.V2)]
+        [InlineData("com.123.Game.App.android", TokenVersion.V2)]
+        [InlineData("123456789", TokenVersion.V2)]
         [InlineData("example.com", TokenVersion.V3)]
         [InlineData("example.org", TokenVersion.V3)]
+        [InlineData("com.123.Game.App.android", TokenVersion.V3)]
+        [InlineData("123456789", TokenVersion.V3)]
         [InlineData("example.com", TokenVersion.V4)]
         [InlineData("example.org", TokenVersion.V4)]
-        private void TokenIsCstgDerivedTest(string domainName, TokenVersion tokenVersion)
+        [InlineData("com.123.Game.App.android", TokenVersion.V4)]
+        [InlineData("123456789", TokenVersion.V4)]
+        private void TokenIsCstgDerivedTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
 
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
-            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainOrAppName);
+            Assert.True(res.IsClientSideGenerated);
+            Assert.True(res.Success);
+            Assert.Equal(DecryptionStatus.Success, res.Status);
+            Assert.Equal(EXAMPLE_EMAIL_RAW_UID2_V2, res.Uid);
+        }
+        
+        [Theory]
+        // These are the domain or app names associated with site SITE_ID but vary in capitalization, as defined by KeySharingResponse();
+        [InlineData("Example.com", TokenVersion.V2)]
+        [InlineData("Example.Org", TokenVersion.V2)]
+        [InlineData("com.123.Game.app.android", TokenVersion.V2)]
+        [InlineData("Example.com", TokenVersion.V3)]
+        [InlineData("Example.Org", TokenVersion.V3)]
+        [InlineData("com.123.Game.app.android", TokenVersion.V3)]
+        [InlineData("Example.com", TokenVersion.V4)]
+        [InlineData("Example.Org", TokenVersion.V4)]
+        [InlineData("com.123.Game.app.android", TokenVersion.V4)]
+        private void DomainOrAppNameCaseInSensitiveTest(string domainOrAppName, TokenVersion tokenVersion)
+        {
+            Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
+
+            var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
+            string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
+            ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainOrAppName);
             Assert.True(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);
@@ -328,50 +359,59 @@ namespace UID2.Client.Test
         [InlineData("", TokenVersion.V2)]
         [InlineData("example.net", TokenVersion.V2)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.edu", TokenVersion.V2)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("com.123.Game.App.ios", TokenVersion.V2)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("123456780", TokenVersion.V2)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V2)]     // Domain not associated with any site.
         [InlineData((string)null, TokenVersion.V3)]
         [InlineData("", TokenVersion.V3)]
         [InlineData("example.net", TokenVersion.V3)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.edu", TokenVersion.V3)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("com.123.Game.App.ios", TokenVersion.V3)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("123456780", TokenVersion.V3)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V3)]     // Domain not associated with any site.
         [InlineData((string)null, TokenVersion.V4)]
         [InlineData("", TokenVersion.V4)]
         [InlineData("example.net", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("example.edu", TokenVersion.V4)] // Domain associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("com.123.Game.App.ios", TokenVersion.V4)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
+        [InlineData("123456780", TokenVersion.V4)] // App associated with site SITE_ID2, as defined by KeySharingResponse().
         [InlineData("foo.com", TokenVersion.V4)]     // Domain not associated with any site.
-        private void TokenIsCstgDerivedDomainNameFailTest(string domainName, TokenVersion tokenVersion)
+        private void TokenIsCstgDerivedDomainOrAppNameFailTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(true).Build();
             var advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
-            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainOrAppName);
             Assert.True(res.IsClientSideGenerated);
             Assert.False(res.Success);
-            Assert.Equal(DecryptionStatus.DomainNameCheckFailed, res.Status);
+            Assert.Equal(DecryptionStatus.DomainOrAppNameCheckFailed, res.Status);
             Assert.Null(res.Uid);
         }
 
         [Theory]
-        // Any domain name is OK, because the token is not client-side generated.
+        // Any domain or app name is OK, because the token is not client-side generated.
         [InlineData((string)null, TokenVersion.V2)]
         [InlineData("", TokenVersion.V2)]
         [InlineData("example.com", TokenVersion.V2)]
         [InlineData("foo.com", TokenVersion.V2)]
+        [InlineData("com.uid2.devapp", TokenVersion.V2)]
         [InlineData((string)null, TokenVersion.V3)]
         [InlineData("", TokenVersion.V3)]
         [InlineData("example.com", TokenVersion.V3)]
         [InlineData("foo.com", TokenVersion.V3)]
+        [InlineData("com.uid2.devapp", TokenVersion.V3)]
         [InlineData((string)null, TokenVersion.V4)]
         [InlineData("", TokenVersion.V4)]
         [InlineData("example.com", TokenVersion.V4)]
         [InlineData("foo.com", TokenVersion.V4)]
-        private void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainName, TokenVersion tokenVersion)
+        [InlineData("com.uid2.devapp", TokenVersion.V4)]
+        private void TokenIsNotCstgDerivedDomainNameSuccessTest(string domainOrAppName, TokenVersion tokenVersion)
         {
             Refresh(KeySharingResponse(new[] { MASTER_KEY, SITE_KEY }));
             var privacyBits = PrivacyBitsBuilder.Builder().WithClientSideGenerated(false).Build();
             string advertisingToken = _tokenBuilder.WithPrivacyBits(privacyBits).WithVersion(tokenVersion).Build();
             ValidateAdvertisingToken(advertisingToken, IdentityScope.UID2, IdentityType.Email, tokenVersion);
-            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainName);
+            var res = _client.DecryptTokenIntoRawUid(advertisingToken, domainOrAppName);
             Assert.False(res.IsClientSideGenerated);
             Assert.True(res.Success);
             Assert.Equal(DecryptionStatus.Success, res.Status);

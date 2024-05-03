@@ -34,20 +34,20 @@ namespace UID2.Client
 
         public DecryptionResponse Decrypt(string token)
         {
-            return Decrypt(token, DateTime.UtcNow, null, ClientType.LegacyWithoutDomainCheck);
+            return Decrypt(token, DateTime.UtcNow, null, ClientType.LegacyWithoutDomainOrAppNameCheck);
         }
 
         public DecryptionResponse Decrypt(string token, DateTime utcNow)
         {
-            return Decrypt(token, utcNow, null, ClientType.LegacyWithoutDomainCheck);
+            return Decrypt(token, utcNow, null, ClientType.LegacyWithoutDomainOrAppNameCheck);
         }
 
-        public DecryptionResponse Decrypt(string token, string domainNameFromBidRequest)
+        public DecryptionResponse Decrypt(string token, string domainOrAppNameFromBidRequest)
         {
-            return Decrypt(token, DateTime.UtcNow, domainNameFromBidRequest, ClientType.LegacyWithDomainCheck);
+            return Decrypt(token, DateTime.UtcNow, domainOrAppNameFromBidRequest, ClientType.LegacyWithDomainOrAppNameCheck);
         }
 
-        private DecryptionResponse Decrypt(string token, DateTime now, string domainNameFromBidRequest, ClientType clientType)
+        private DecryptionResponse Decrypt(string token, DateTime now, string domainOrAppNameFromBidRequest, ClientType clientType)
         {
             var container = Volatile.Read(ref _container);
             if (container == null)
@@ -62,7 +62,7 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, domainNameFromBidRequest, _identityScope, clientType);
+                return UID2Encryption.Decrypt(token, container, now, domainOrAppNameFromBidRequest, _identityScope, clientType);
             }
             catch (Exception)
             {

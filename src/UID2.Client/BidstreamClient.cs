@@ -12,14 +12,14 @@ namespace UID2.Client
             _tokenHelper = new TokenHelper(endpoint, authKey, secretKey);
         }
 
-        public DecryptionResponse DecryptTokenIntoRawUid(string token, string domainNameFromBidRequest)
+        public DecryptionResponse DecryptTokenIntoRawUid(string token, string domainOrAppNameFromBidRequest)
         {
-            return DecryptTokenIntoRawUid(token, domainNameFromBidRequest, DateTime.UtcNow);
+            return DecryptTokenIntoRawUid(token, domainOrAppNameFromBidRequest, DateTime.UtcNow);
         }
 
-        internal DecryptionResponse DecryptTokenIntoRawUid(string token, string domainNameFromBidRequest, DateTime utcNow)
+        internal DecryptionResponse DecryptTokenIntoRawUid(string token, string domainOrAppNameFromBidRequest, DateTime utcNow)
         {
-            return _tokenHelper.Decrypt(token, utcNow, domainNameFromBidRequest, ClientType.Bidstream);
+            return _tokenHelper.Decrypt(token, utcNow, domainOrAppNameFromBidRequest, ClientType.Bidstream);
         }
 
 

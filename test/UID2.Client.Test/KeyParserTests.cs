@@ -156,9 +156,9 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(json);
 
-            var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
+            var isDomainOrAppNameForSite = keyContainer.IsDomainOrAppNameAllowedForSite(1, "example.com");
 
-            Assert.False(isDomainNameForSite);
+            Assert.False(isDomainOrAppNameForSite);
 
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }
@@ -184,9 +184,9 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(json);
 
-            var isDomainNameForSite = keyContainer.IsDomainNameAllowedForSite(1, "example.com");
-            Assert.False(isDomainNameForSite);
-            Assert.False(keyContainer.IsDomainNameAllowedForSite(1, null));
+            var isDomainOrAppNameForSite = keyContainer.IsDomainOrAppNameAllowedForSite(1, "example.com");
+            Assert.False(isDomainOrAppNameForSite);
+            Assert.False(keyContainer.IsDomainOrAppNameAllowedForSite(1, null));
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }
 
@@ -220,14 +220,14 @@ namespace UID2.Client.Test
 
             var keyContainer = KeyParser.Parse(s);
 
-            Assert.True(keyContainer.IsDomainNameAllowedForSite(9, "example.com"));
-            Assert.False(keyContainer.IsDomainNameAllowedForSite(9, "example.org"));
-            Assert.False(keyContainer.IsDomainNameAllowedForSite(9, "example.net"));
+            Assert.True(keyContainer.IsDomainOrAppNameAllowedForSite(9, "example.com"));
+            Assert.False(keyContainer.IsDomainOrAppNameAllowedForSite(9, "example.org"));
+            Assert.False(keyContainer.IsDomainOrAppNameAllowedForSite(9, "example.net"));
 
-            Assert.False(keyContainer.IsDomainNameAllowedForSite(100, "example.com"));
-            Assert.True(keyContainer.IsDomainNameAllowedForSite(100, "example.org"));
-            Assert.True(keyContainer.IsDomainNameAllowedForSite(100, "example.net"));
-            Assert.False(keyContainer.IsDomainNameAllowedForSite(100, null));
+            Assert.False(keyContainer.IsDomainOrAppNameAllowedForSite(100, "example.com"));
+            Assert.True(keyContainer.IsDomainOrAppNameAllowedForSite(100, "example.org"));
+            Assert.True(keyContainer.IsDomainOrAppNameAllowedForSite(100, "example.net"));
+            Assert.False(keyContainer.IsDomainOrAppNameAllowedForSite(100, null));
 
             Assert.True(keyContainer.TryGetKey(3, out var key));
         }

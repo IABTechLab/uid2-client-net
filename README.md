@@ -22,7 +22,7 @@ dotnet test
 To run the sample app:
 
 ```
-dotnet run --project src/SampleApp/SampleApp.csproj https://integ.uidapi.com \
+dotnet run --project src/SampleApp/SampleApp.csproj https://operator-integ.uidapi.com \
 	<your-api-token> <your-secret-key> <advertising-token>
 ```
 

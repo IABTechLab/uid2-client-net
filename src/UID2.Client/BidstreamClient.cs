@@ -17,6 +17,11 @@ namespace UID2.Client
             return DecryptTokenIntoRawUid(token, domainOrAppNameFromBidRequest, DateTime.UtcNow);
         }
 
+        public TokenDetails DecryptTokenDetails(string token, string domainOrAppNameFromBidRequest)
+        {
+            return _tokenHelper.DecryptTokenDetails(token, DateTime.UtcNow, domainOrAppNameFromBidRequest, ClientType.Bidstream);
+        }
+
         internal DecryptionResponse DecryptTokenIntoRawUid(string token, string domainOrAppNameFromBidRequest, DateTime utcNow)
         {
             return _tokenHelper.Decrypt(token, utcNow, domainOrAppNameFromBidRequest, ClientType.Bidstream);

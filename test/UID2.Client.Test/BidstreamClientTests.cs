@@ -81,6 +81,28 @@ namespace UID2.Client.Test
             DecryptAndAssertSuccess(advertisingToken, tokenVersion);
         }
 
+        [Theory]
+        [InlineData(IdentityScope.UID2)]
+        [InlineData(IdentityScope.EUID)]
+        private void CanDecryptV4TokenEncodedAsBase64(IdentityScope identityScope)
+        {
+            Refresh(KeyBidstreamResponse(new[] { MASTER_KEY, SITE_KEY }, identityScope));
+
+            var now = DateTime.UtcNow;
+
+            string advertisingTokenBase64;
+            do
+            {
+                var advertisingTokenBase64Url = AdvertisingTokenBuilder.Builder().WithVersion(TokenVersion.V4).WithScope(identityScope).WithEstablished(now.AddMonths(-4)).WithGenerated(now.AddDays(-1)).WithExpiry(now.AddDays(2)).Build();
+                var tokenAsBinary = UID2Base64UrlCoder.Decode(advertisingTokenBase64Url);
+                advertisingTokenBase64 = Convert.ToBase64String(tokenAsBinary);
+
+            } while (!advertisingTokenBase64.Contains("=") || !advertisingTokenBase64.Contains("/") || !advertisingTokenBase64.Contains("+"));
+
+            DecryptAndAssertSuccess(advertisingTokenBase64, TokenVersion.V4);
+        }
+
+
         private void DecryptAndAssertSuccess(string advertisingToken, TokenVersion tokenVersion)
         {
             var res = _client.DecryptTokenIntoRawUid(advertisingToken, null);

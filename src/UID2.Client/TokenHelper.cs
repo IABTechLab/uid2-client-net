@@ -15,28 +15,44 @@ namespace UID2.Client
             _uid2ClientHelper = new Uid2ClientHelper(endpoint, authKey, secretKey);
         }
 
+        internal static DecryptionResponse TokenDetailsToDecryptionResponse(TokenDetails tokenDetails)
+        {
+            string uid = tokenDetails.idString; //todo, some errors should blank this out
+            int siteKeySiteId = 0; //todo
+
+            return new DecryptionResponse(tokenDetails.decryptionStatus, uid, tokenDetails.established, tokenDetails.siteId, siteKeySiteId, tokenDetails.identityType, tokenDetails.tokenVersion,
+                tokenDetails.privacyBits?.IsClientSideGenerated, tokenDetails.expiry);
+        }
+
         internal DecryptionResponse Decrypt(string token, DateTime now, string domainOrAppNameFromBidRequest, ClientType clientType)
+        {
+            var tokenDetails = DecryptTokenDetails(token, now, domainOrAppNameFromBidRequest, clientType);
+            return TokenDetailsToDecryptionResponse(tokenDetails);
+        }
+
+        internal TokenDetails DecryptTokenDetails(string token, DateTime now, string domainOrAppNameFromBidRequest, ClientType clientType)
         {
             var container = Volatile.Read(ref _container);
             if (container == null)
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotInitialized);
+                return new TokenDetails(DecryptionStatus.NotInitialized);
             }
 
             if (!container.IsValid(now))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.KeysNotSynced);
+                return new TokenDetails(DecryptionStatus.KeysNotSynced);
             }
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, domainOrAppNameFromBidRequest, container.IdentityScope, clientType);
+                return UID2Encryption.DecryptTokenDetails(token, container, now, domainOrAppNameFromBidRequest, container.IdentityScope, clientType);
             }
             catch (Exception)
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                return new TokenDetails(DecryptionStatus.InvalidPayload);
             }
         }
+
 
         internal EncryptionDataResponse Encrypt(string rawUid, DateTime now)
         {

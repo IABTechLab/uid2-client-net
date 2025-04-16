@@ -24,7 +24,7 @@ on:
 jobs:
   build-and-pubish:
     name: Build and publish nupkg to Nuget repository
-    uses: IABTechLab/uid2-shared-actions/.github/workflows/shared-publish-to-nuget-versioned.yaml@kcc-UID2-5248-nuget-vulnerability-scan
+    uses: IABTechLab/uid2-shared-actions/.github/workflows/shared-publish-to-nuget-versioned.yaml@v3
     with:
       release_type: ${{ inputs.release_type }}
       dotnet_version: ${{ inputs.dotnet_version }}

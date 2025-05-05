@@ -17,6 +17,51 @@ namespace UID2.Client
         LegacyWithDomainOrAppNameCheck
     }
 
+    public class TokenDetails
+    {
+        public TokenDetails(DecryptionStatus status = DecryptionStatus.Success)
+        {
+            this.decryptionStatus = status;
+        }
+
+        //todo, capitalize and get/set
+        public IdentityScope? identityScope;
+        public IdentityType? identityType;
+        public byte tokenVersion;
+        public int masterKeyId;
+        
+        public byte[] masterIv;
+        //masterPayload
+        //masterGMAC (v3,4 only)
+
+        //Maater payload
+        public DateTime expiry;
+        public DateTime? generated;
+        public int? operatorSiteId;
+        public byte? operatorType;
+        public int? operatorVersion;
+        public int? operatorKeyId;
+
+        public int siteKeyId; //"Site Key ID of the key for the identity payload"
+        //identityIv
+        //identityPayload
+        //identityGMAC
+
+        //IdentityPayload
+        public int siteId;
+        public long? publisherId;
+        public int? publisherKeyId; //"Client Key Id"
+
+        public PrivacyBits privacyBits;
+        public DateTime established;
+        public DateTime? refreshed;
+
+        public int? idLength;
+        public string idString;
+
+        public DecryptionStatus decryptionStatus;
+    }
+
     internal static class UID2Encryption
     {
         public const int GCM_AUTHTAG_LENGTH = 16;
@@ -26,11 +71,11 @@ namespace UID2.Client
         private static char[] BASE64_URL_SPECIAL_CHARS = { '-', '_' };
 
 
-        internal static DecryptionResponse Decrypt(string token, KeyContainer keys, DateTime now, string domainOrAppName, IdentityScope identityScope, ClientType clientType)
+        internal static TokenDetails DecryptTokenDetails(string token, KeyContainer keys, DateTime now, string domainOrAppName, IdentityScope identityScope, ClientType clientType)
         {
             if (token.Length < 4)
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                return new TokenDetails(DecryptionStatus.InvalidPayload);
             }
 
             string headerStr = token.Substring(0, 4);
@@ -53,107 +98,119 @@ namespace UID2.Client
                 return DecryptV3(UID2Base64UrlCoder.Decode(token), keys, now, identityScope, 4, domainOrAppName, clientType);
             }
 
-            return DecryptionResponse.MakeError(DecryptionStatus.VersionNotSupported);
+            return new TokenDetails(DecryptionStatus.VersionNotSupported);
         }
 
-        private static DecryptionResponse DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainOrAppName, ClientType clientType)
+        private static TokenDetails DecryptV2(byte[] encryptedId, KeyContainer keys, DateTime now, string domainOrAppName, ClientType clientType)
         {
+            var tokenDetails = new TokenDetails();
             if (encryptedId.Length != TOKEN_V2_LENGTH)
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                tokenDetails.decryptionStatus = DecryptionStatus.InvalidPayload;
+                return tokenDetails;
             }
             
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
-            // version
-            reader.ReadByte();
 
-            var masterKeyId = reader.ReadInt32();
+            tokenDetails.tokenVersion = reader.ReadByte();
+
+            tokenDetails.masterKeyId = reader.ReadInt32();
 
             Key masterKey = null;
-            if (!keys.TryGetKey(masterKeyId, out masterKey))
+            if (!keys.TryGetKey(tokenDetails.masterKeyId, out masterKey))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForMasterKey);
+                tokenDetails.decryptionStatus = DecryptionStatus.NotAuthorizedForMasterKey;
+                return tokenDetails;
             }
 
-            var masterDecrypted = Decrypt(new ByteArraySlice(encryptedId, 21, encryptedId.Length - 21),
-                reader.ReadBytes(16), masterKey.Secret);
+            tokenDetails.masterIv = reader.ReadBytes(16);
+
+            var masterDecrypted = Decrypt(new ByteArraySlice(encryptedId, 21, encryptedId.Length - 21), tokenDetails.masterIv, masterKey.Secret);
 
             var masterPayloadReader = new BigEndianByteReader(new MemoryStream(masterDecrypted));
 
-            long expiresMilliseconds = masterPayloadReader.ReadInt64();
+            var expiresMilliseconds = masterPayloadReader.ReadInt64();
 
-            var siteKeyId = masterPayloadReader.ReadInt32();
+            tokenDetails.siteKeyId = masterPayloadReader.ReadInt32();
 
             Key siteKey = null;
-            if (!keys.TryGetKey(siteKeyId, out siteKey))
+            if (!keys.TryGetKey(tokenDetails.siteKeyId, out siteKey))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
+                tokenDetails.decryptionStatus = DecryptionStatus.NotAuthorizedForKey;
+                return tokenDetails;
             }
 
+            //var identityDecrypted = Decrypt(new ByteArraySlice(masterDecrypted, 28, masterDecrypted.Length - 28), masterPayloadReader.ReadBytes(16), siteKey.Secret);
             var identityDecrypted = Decrypt(new ByteArraySlice(masterDecrypted, 28, masterDecrypted.Length - 28), masterPayloadReader.ReadBytes(16), siteKey.Secret);
 
             var identityPayloadReader = new BigEndianByteReader(new MemoryStream(identityDecrypted));
 
-            var siteId = identityPayloadReader.ReadInt32();
-            var idLength = identityPayloadReader.ReadInt32();
+            tokenDetails.siteId = identityPayloadReader.ReadInt32();
+            tokenDetails.idLength = identityPayloadReader.ReadInt32();
 
-            var idString = Encoding.UTF8.GetString(identityPayloadReader.ReadBytes(idLength));
+            tokenDetails.idString = Encoding.UTF8.GetString(identityPayloadReader.ReadBytes((int)tokenDetails.idLength));
 
-            var privacyBits = new PrivacyBits(identityPayloadReader.ReadInt32());
+            tokenDetails.privacyBits = new PrivacyBits(identityPayloadReader.ReadInt32());
 
             var establishedMilliseconds = identityPayloadReader.ReadInt64();
 
-            var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
+            tokenDetails.established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
 
-            const int advertisingTokenVersion = 2;
-            var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
-            if (expiry < now)
+            tokenDetails.expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
+            if (tokenDetails.expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                tokenDetails.decryptionStatus = DecryptionStatus.ExpiredToken;
             }
 
-            if (privacyBits.IsOptedOut)
+            if (tokenDetails.privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                tokenDetails.decryptionStatus = DecryptionStatus.UserOptedOut;
             }
 
-            if (!IsDomainOrAppNameAllowedForSite(clientType, privacyBits, siteId, domainOrAppName, keys))
+            if (!IsDomainOrAppNameAllowedForSite(clientType, tokenDetails.privacyBits, tokenDetails.siteId, domainOrAppName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainOrAppNameCheckFailed, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                tokenDetails.decryptionStatus = DecryptionStatus.DomainOrAppNameCheckFailed;
             }
 
-            if (!DoesTokenHaveValidLifetime(clientType, keys, now, expiry, now))
-                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+            if (!DoesTokenHaveValidLifetime(clientType, keys, now, tokenDetails.expiry, now))
+            {
+                tokenDetails.decryptionStatus = DecryptionStatus.InvalidTokenLifetime;
+            }
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, null, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+            tokenDetails.decryptionStatus = DecryptionStatus.Success;
+            return tokenDetails;
         }
 
-        private static DecryptionResponse DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainOrAppName, ClientType clientType)
+        private static TokenDetails DecryptV3(byte[] encryptedId, KeyContainer keys, DateTime now, IdentityScope identityScope, int advertisingTokenVersion, string domainOrAppName, ClientType clientType)
         {
+            var tokenDetails = new TokenDetails();
             if (encryptedId.Length < TOKEN_V3_MIN_LENGTH)
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.InvalidPayload);
+                tokenDetails.decryptionStatus = DecryptionStatus.InvalidPayload;
+                return tokenDetails;
             }
-            
-            IdentityType identityType = GetIdentityType(encryptedId);
+
+            tokenDetails.identityType = GetIdentityType(encryptedId);
             
             var reader = new BigEndianByteReader(new MemoryStream(encryptedId));
 
             var prefix = reader.ReadByte();
-            if (DecodeIdentityScopeV3(prefix) != identityScope) 
+            tokenDetails.identityScope = DecodeIdentityScopeV3(prefix);
+            if (tokenDetails.identityScope != identityScope) 
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.InvalidIdentityScope);
+                tokenDetails.decryptionStatus = DecryptionStatus.InvalidIdentityScope;
+                return tokenDetails;
             }
 
-            // version
-            reader.ReadByte();
+            tokenDetails.tokenVersion = reader.ReadByte();
 
-            var masterKeyId = reader.ReadInt32();
+            tokenDetails.masterKeyId = reader.ReadInt32();
 
-            if (!keys.TryGetKey(masterKeyId, out var masterKey))
+            if (!keys.TryGetKey(tokenDetails.masterKeyId, out var masterKey))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForMasterKey);
+                tokenDetails.decryptionStatus = DecryptionStatus.NotAuthorizedForMasterKey;
+                return tokenDetails;
             }
 
             var masterDecrypted = DecryptGCM(new ByteArraySlice(encryptedId, 6, encryptedId.Length - 6), masterKey.Secret);
@@ -161,57 +218,59 @@ namespace UID2.Client
 
             long expiresMilliseconds = masterPayloadReader.ReadInt64();
             long generatedMilliseconds = masterPayloadReader.ReadInt64();
-            var generated = DateTimeUtils.FromEpochMilliseconds(generatedMilliseconds);
+            tokenDetails.generated = DateTimeUtils.FromEpochMilliseconds(generatedMilliseconds);
 
-            int operatorSiteId = masterPayloadReader.ReadInt32();
-            byte operatorType = masterPayloadReader.ReadByte();
-            int operatorVersion = masterPayloadReader.ReadInt32();
-            int operatorKeyId = masterPayloadReader.ReadInt32();
+            tokenDetails.operatorSiteId = masterPayloadReader.ReadInt32();
+            tokenDetails.operatorType = masterPayloadReader.ReadByte();
+            tokenDetails.operatorVersion = masterPayloadReader.ReadInt32();
+            tokenDetails.operatorKeyId = masterPayloadReader.ReadInt32();
 
-            var siteKeyId = masterPayloadReader.ReadInt32();
+            tokenDetails.siteKeyId = masterPayloadReader.ReadInt32();
 
-            if (!keys.TryGetKey(siteKeyId, out var siteKey))
+            if (!keys.TryGetKey(tokenDetails.siteKeyId, out var siteKey))
             {
-                return DecryptionResponse.MakeError(DecryptionStatus.NotAuthorizedForKey);
+                tokenDetails.decryptionStatus = DecryptionStatus.NotAuthorizedForKey;
+                return tokenDetails;
             }
 
             var sitePayload = DecryptGCM(new ByteArraySlice(masterDecrypted, 33, masterDecrypted.Length - 33), siteKey.Secret);
             var sitePayloadReader = new BigEndianByteReader(new MemoryStream(sitePayload));
 
-            var siteId = sitePayloadReader.ReadInt32();
-            var publisherId = sitePayloadReader.ReadInt64();
-            var publisherKeyId = sitePayloadReader.ReadInt32();
+            tokenDetails.siteId = sitePayloadReader.ReadInt32();
+            tokenDetails.publisherId = sitePayloadReader.ReadInt64();
+            tokenDetails.publisherKeyId = sitePayloadReader.ReadInt32();
 
-            var privacyBits = new PrivacyBits(sitePayloadReader.ReadInt32());
+            tokenDetails.privacyBits = new PrivacyBits(sitePayloadReader.ReadInt32());
 
             var establishedMilliseconds = sitePayloadReader.ReadInt64();
+            tokenDetails.established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
             var refreshedMilliseconds = sitePayloadReader.ReadInt64();
+            tokenDetails.refreshed = DateTimeUtils.FromEpochMilliseconds(refreshedMilliseconds);
 
             var id = sitePayloadReader.ReadBytes(sitePayload.Length - 36);
 
-            var established = DateTimeUtils.FromEpochMilliseconds(establishedMilliseconds);
-            var idString = Convert.ToBase64String(id);
+            tokenDetails.idString = Convert.ToBase64String(id);
 
-            var expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
-            if (expiry < now)
+            tokenDetails.expiry = DateTimeUtils.FromEpochMilliseconds(expiresMilliseconds);
+            if (tokenDetails.expiry < now)
             {
-                return new DecryptionResponse(DecryptionStatus.ExpiredToken, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                tokenDetails.decryptionStatus = DecryptionStatus.ExpiredToken;
             }
 
-            if (privacyBits.IsOptedOut)
+            if (tokenDetails.privacyBits.IsOptedOut)
             {
-                return new DecryptionResponse(DecryptionStatus.UserOptedOut, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                tokenDetails.decryptionStatus = DecryptionStatus.UserOptedOut;
             }
 
-            if (!IsDomainOrAppNameAllowedForSite(clientType, privacyBits, siteId, domainOrAppName, keys))
+            if (!IsDomainOrAppNameAllowedForSite(clientType, tokenDetails.privacyBits, tokenDetails.siteId, domainOrAppName, keys))
             {
-                return new DecryptionResponse(DecryptionStatus.DomainOrAppNameCheckFailed, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+                tokenDetails.decryptionStatus = DecryptionStatus.DomainOrAppNameCheckFailed;
             }
 
-            if (!DoesTokenHaveValidLifetime(clientType, keys, generated, expiry, now))
-                return new DecryptionResponse(DecryptionStatus.InvalidTokenLifetime, null, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+            if (!DoesTokenHaveValidLifetime(clientType, keys, (DateTime)tokenDetails.generated, tokenDetails.expiry, now))
+                tokenDetails.decryptionStatus = DecryptionStatus.InvalidTokenLifetime;
 
-            return new DecryptionResponse(DecryptionStatus.Success, idString, established, siteId, siteKey.SiteId, identityType, advertisingTokenVersion, privacyBits.IsClientSideGenerated, expiry);
+            return tokenDetails;
         }
 
         private static bool DoesTokenHaveValidLifetime(ClientType clientType, KeyContainer keys, DateTime generatedOrNow, DateTime expiry, DateTime now)
@@ -328,14 +387,14 @@ namespace UID2.Client
                     try
                     {
                         // if the enableDomainOrAppNameCheck param is enabled , the caller would have to provide siteId as part of the EncryptionDataRequest.
-                        DecryptionResponse decryptedToken = Decrypt(request.AdvertisingToken, keys, now, domainOrAppName: null, identityScope, ClientType.LegacyWithoutDomainOrAppNameCheck);
-                        if (!decryptedToken.Success)
+                        var tokenDetails = DecryptTokenDetails(request.AdvertisingToken, keys, now, domainOrAppName: null, identityScope, ClientType.LegacyWithoutDomainOrAppNameCheck);
+                        if (tokenDetails.decryptionStatus != DecryptionStatus.Success)
                         {
                             return EncryptionDataResponse.MakeError(EncryptionStatus.TokenDecryptFailure);
                         }
 
-                        siteId = decryptedToken.SiteId.Value;
-                        siteKeySiteId = decryptedToken.SiteKeySiteId.Value;
+                        siteId = tokenDetails.siteId;
+                        siteKeySiteId = tokenDetails.siteKeyId;
                     }
                     catch (Exception)
                     {

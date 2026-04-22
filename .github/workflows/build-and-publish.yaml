@@ -30,4 +30,5 @@ jobs:
       dotnet_version: ${{ inputs.dotnet_version }}
       publish_vulnerabilities: ${{ inputs.publish_vulnerabilities }}
       vulnerability_severity: ${{ inputs.vulnerability_severity }}
+      merge_environment: ${{ github.ref_protected && 'ci-auto-merge' || '' }}
     secrets: inherit

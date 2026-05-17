@@ -22,8 +22,16 @@ on:
         default: 'CRITICAL,HIGH'
 
 jobs:
+  approve-publish:
+    name: Approve publish
+    runs-on: ubuntu-latest
+    environment: sdk-publish-approval
+    steps:
+      - run: echo "Publish approved"
+
   build-and-pubish:
     name: Build and publish nupkg to Nuget repository
+    needs: approve-publish
     uses: IABTechLab/uid2-shared-actions/.github/workflows/shared-publish-to-nuget-versioned.yaml@v3
     with:
       release_type: ${{ inputs.release_type }}

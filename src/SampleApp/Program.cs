@@ -32,6 +32,45 @@ namespace app
                 return;
             }
 
+            var tokenDetails = client.DecryptTokenDetails(_advertisingToken, _domain);
+
+            //masterIv = { System.Convert.ToBase64String(tokenDetails.masterIv)}
+            Console.WriteLine(
+$@"
+
+DecryptionStatus    = {tokenDetails.decryptionStatus};
+
+identityScope       = {tokenDetails.identityScope}
+identityType        = {tokenDetails.identityType}
+tokenVersion        = {tokenDetails.tokenVersion}
+masterKeyId         = {tokenDetails.masterKeyId}
+
+expiry              = {tokenDetails.expiry}
+generated           = {tokenDetails.generated}
+operatorSiteId      = {tokenDetails.operatorSiteId}
+operatorType        = {tokenDetails.operatorType}
+operatorVersion     = {tokenDetails.operatorVersion}
+operatorKeyId       = {tokenDetails.operatorKeyId}
+
+siteKeyId           = {tokenDetails.siteKeyId}
+
+siteId              = {tokenDetails.siteId}
+publisherId         = {tokenDetails.publisherId}
+publisherKeyId      = {tokenDetails.publisherKeyId}
+
+privacyBits.CSTG    = {tokenDetails.privacyBits.IsClientSideGenerated}
+privacyBits.OptedOut= {tokenDetails.privacyBits.IsOptedOut}
+established         = {tokenDetails.established}
+refreshed           = {tokenDetails.refreshed}
+
+idLength            = {tokenDetails.idLength}
+idString            = {tokenDetails.idString}
+
+");
+
+
+
+            return;
             var result = client.DecryptTokenIntoRawUid(_advertisingToken, _domain);
             Console.WriteLine($"DecryptedSuccess={result.Success} Status={result.Status}");
             Console.WriteLine($"UID={result.Uid}");

@@ -1,6 +1,6 @@
 ﻿namespace UID2.Client
 {
-    internal enum IdentityScope
+    public enum IdentityScope
     {
         UID2 = 0,
         EUID = 1,

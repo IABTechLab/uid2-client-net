@@ -62,7 +62,8 @@ namespace UID2.Client
 
             try
             {
-                return UID2Encryption.Decrypt(token, container, now, domainOrAppNameFromBidRequest, _identityScope, clientType);
+                var tokenDetails = UID2Encryption.DecryptTokenDetails(token, container, now, domainOrAppNameFromBidRequest, _identityScope, clientType);
+                return TokenHelper.TokenDetailsToDecryptionResponse(tokenDetails);
             }
             catch (Exception)
             {

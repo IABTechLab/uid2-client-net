@@ -2,7 +2,7 @@
 
 namespace UID2.Client
 {
-    internal class PrivacyBits
+    public class PrivacyBits
     {
         // Bit 0 is legacy and is no longer in use
         private const int BitClientSideGenerated = 1;
